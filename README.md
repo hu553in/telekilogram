@@ -12,6 +12,7 @@ Feed assistant Telegram bot written in Go.
 
 ## Roadmap
 
+- [ ] Fill `README.md`
 - [ ] Add context to errors (`fmt.Errorf`)
 - [ ] Replace 00:00 UTC with setting per user
 - [ ] Ensure that there's no blank windows between periods
