@@ -25,6 +25,21 @@ jobs:
         with:
           version: v2.2.2
 
+  build:
+    runs-on: ubuntu-latest
+    needs: verify
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23.4"
+
+      - name: Install deps
+        run: go mod download
+
       - name: Build
         run: go build -o ./build/app
 
@@ -36,7 +51,7 @@ jobs:
 
   deploy:
     runs-on: ubuntu-latest
-    needs: verify
+    needs: build
     steps:
       - name: Checkout
         uses: actions/checkout@v4
