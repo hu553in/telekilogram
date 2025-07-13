@@ -7,7 +7,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
@@ -68,9 +67,6 @@ func (b *Bot) Start() {
 	updateConfig.Timeout = 60
 
 	updates := b.api.GetUpdatesChan(updateConfig)
-
-	time.Sleep(time.Millisecond * 500)
-	updates.Clear()
 
 	for update := range updates {
 		switch {

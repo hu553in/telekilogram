@@ -18,5 +18,7 @@ rsync -avzr --progress -e "ssh -p ${SSH_PORT}" \
 
 # configure environment and service
 
-ssh ${SSH_USER}@${SSH_IP} -p ${SSH_PORT} \
-    "bash -s" < ./scripts/configure-env-and-service.sh
+envsubst '$TOKEN $ALLOWED_USERS' \
+    < ./scripts/configure-env-and-service.sh | \
+    ssh ${SSH_USER}@${SSH_IP} -p ${SSH_PORT} \
+    "bash -s"
