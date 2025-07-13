@@ -13,7 +13,7 @@ ssh ${SSH_USER}@${SSH_IP} -p ${SSH_PORT} \
 # transfer binary
 
 rsync -avzr --progress -e "ssh -p ${SSH_PORT}" \
-    ./build/app \
+    ./build/ \
     ${SSH_USER}@${SSH_IP}:${APP_DIR}/
 
 # configure environment and service
