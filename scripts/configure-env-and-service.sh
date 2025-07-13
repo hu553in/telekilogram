@@ -36,5 +36,4 @@ chmod 644 "$SERVICE_PATH"
 # enable and restart service
 
 systemctl daemon-reload
-systemctl enable "$SERVICE_PATH"
-systemctl restart "$SERVICE_PATH"
+systemctl enable --now "$SERVICE_PATH"
