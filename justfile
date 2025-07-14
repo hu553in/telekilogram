@@ -3,6 +3,10 @@ bin_name := "app"
 
 set dotenv-load := true
 
+[private]
+ensure-build-dir:
+    mkdir -p {{build_dir}}
+
 all: check run
 
 check: install-deps lint fmt test build
@@ -16,11 +20,14 @@ lint:
 fmt:
     golangci-lint fmt
 
-test:
-    go test -v -coverprofile="{{build_dir}}/coverage.out" -cover ./...
+test: ensure-build-dir
+    go test -v ./... \
+        -coverprofile="{{build_dir}}/coverage.out" \
+        -covermode=atomic \
+        -coverpkg=./...
 
-build:
+build: ensure-build-dir
     go build -o {{build_dir}}/{{bin_name}}
 
-run:
+run: ensure-build-dir
     {{build_dir}}/{{bin_name}}
