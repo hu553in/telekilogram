@@ -17,6 +17,7 @@ Feed assistant Telegram bot written in Go.
 - [ ] Fill `README.md`
 - [ ] Add context to errors (`fmt.Errorf`)
 - [ ] Replace 00:00 UTC with setting per user
+- [ ] Optimize performance of business functions (they are really slow)
 - [ ] Ensure that there's no blank windows between periods
 - [ ] Deploy using Docker instead of `systemd` service (optional)
 - [ ] Migrate to https://github.com/go-telegram/bot (optional)
