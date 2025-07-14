@@ -2,15 +2,20 @@ package database
 
 import (
 	"database/sql"
+	"embed"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/sqlite3"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/golang-migrate/migrate/v4/source/iofs"
 	_ "github.com/mattn/go-sqlite3"
 
 	"log/slog"
 	model "telekilogram/model"
 )
+
+//go:embed migrations/*.sql
+var migrationsFS embed.FS
 
 type Database struct {
 	db *sql.DB
@@ -22,15 +27,21 @@ func NewDatabase(dbPath string) (*Database, error) {
 		return nil, err
 	}
 
-	driver, err := sqlite3.WithInstance(db, &sqlite3.Config{})
+	dbDriver, err := sqlite3.WithInstance(db, &sqlite3.Config{})
 	if err != nil {
 		return nil, err
 	}
 
-	m, err := migrate.NewWithDatabaseInstance(
-		"file://database/migrations",
+	srcDriver, err := iofs.New(migrationsFS, "migrations")
+	if err != nil {
+		return nil, err
+	}
+
+	m, err := migrate.NewWithInstance(
+		"iofs",
+		srcDriver,
 		"sqlite3",
-		driver,
+		dbDriver,
 	)
 	if err != nil {
 		return nil, err
