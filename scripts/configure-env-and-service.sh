@@ -23,6 +23,7 @@ After=network.target
 [Service]
 Type=simple
 Restart=always
+WorkingDirectory=$APP_DIR
 ExecStart=$APP_DIR/app
 
 [Install]
