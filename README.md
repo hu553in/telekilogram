@@ -1,5 +1,7 @@
 # Telekilogram
 
+[![CI](https://github.com/hu553in/telekilogram/actions/workflows/ci.yml/badge.svg)](https://github.com/hu553in/telekilogram/actions/workflows/ci.yml)
+
 Feed assistant Telegram bot written in Go.
 
 ## Functionality

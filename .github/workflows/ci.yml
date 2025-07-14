@@ -6,45 +6,45 @@ on:
   workflow_dispatch:
 
 jobs:
-  verify:
+  lint:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5
         with:
-          go-version: "1.23.4"
+          go-version-file: go.mod
 
-      - name: Install deps
-        run: go mod download
+      - uses: golangci/golangci-lint-action@v8
 
-      - name: Lint
-        uses: golangci/golangci-lint-action@v8
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
         with:
-          version: v2.2.2
+          go-version-file: go.mod
+
+      - uses: extractions/setup-just@v3
+
+      - run: just install-deps test
 
   build:
     runs-on: ubuntu-latest
-    needs: verify
+    needs: [lint, test]
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5
         with:
-          go-version: "1.23.4"
+          go-version-file: go.mod
 
-      - name: Install deps
-        run: go mod download
+      - uses: extractions/setup-just@v3
 
-      - name: Build
-        run: go build -o ./build/app
+      - run: just install-deps build
 
-      - name: Upload binary
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: binary
           path: ./build/app
@@ -53,26 +53,21 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Download binary
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           name: binary
           path: ./build
 
-      - name: Configure SSH key
-        uses: shimataro/ssh-key-action@v2.7.0
+      - uses: shimataro/ssh-key-action@v2
         with:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           known_hosts: "just-a-placeholder"
 
-      - name: Configure known hosts
-        run: ssh-keyscan -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_IP }} >> ~/.ssh/known_hosts
+      - run: ssh-keyscan -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_IP }} >> ~/.ssh/known_hosts
 
-      - name: Deploy
-        run: bash ./scripts/deploy.sh
+      - run: bash ./scripts/deploy.sh
         env:
           SSH_USER: ${{ secrets.SSH_USER }}
           SSH_IP: ${{ secrets.SSH_IP }}
