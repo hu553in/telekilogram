@@ -32,6 +32,7 @@ EOF
 # grant permissions
 
 chmod 644 "$SERVICE_PATH"
+chmod +x $APP_DIR/app
 
 # enable and restart service
 

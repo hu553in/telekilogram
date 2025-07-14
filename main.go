@@ -8,6 +8,8 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/joho/godotenv"
+
 	bot "telekilogram/bot"
 	db "telekilogram/database"
 	feed "telekilogram/feed"
@@ -15,6 +17,11 @@ import (
 )
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		slog.Error("Failed to load .env file", slog.Any("error", err))
+	}
+
 	token := os.Getenv("TOKEN")
 	if token == "" {
 		slog.Error("TOKEN is required")
