@@ -17,7 +17,7 @@ type Scheduler struct {
 	fetcher *feed.FeedFetcher
 }
 
-func NewScheduler(bot *bot.Bot, fetcher *feed.FeedFetcher) *Scheduler {
+func New(bot *bot.Bot, fetcher *feed.FeedFetcher) *Scheduler {
 	c := cron.New(cron.WithLocation(time.UTC))
 	return &Scheduler{
 		cron:    c,

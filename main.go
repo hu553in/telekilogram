@@ -34,7 +34,7 @@ func main() {
 		dbPath = "./db"
 	}
 
-	db, err := database.NewDatabase(dbPath)
+	db, err := database.New(dbPath)
 	if err != nil {
 		slog.Error("Failed to initialize db", slog.Any("error", err))
 		return
@@ -63,14 +63,14 @@ func main() {
 	}
 
 	fetcher := feed.NewFeedFetcher(db)
-	bot, err := bot.NewBot(token, db, fetcher, allowedUsers)
+	bot, err := bot.New(token, db, fetcher, allowedUsers)
 	if err != nil {
 		slog.Error("Failed to initialize bot", slog.Any("error", err))
 		return
 	}
 	slog.Info("Bot is initialized")
 
-	scheduler := scheduler.NewScheduler(bot, fetcher)
+	scheduler := scheduler.New(bot, fetcher)
 
 	if err = scheduler.Start(); err != nil {
 		slog.Error("Failed to start scheduler", slog.Any("error", err))

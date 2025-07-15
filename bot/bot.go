@@ -26,16 +26,17 @@ I'm your feed assistant. I can help you:
 – Receive auto-digest (now-24h) automatically each 00:00 UTC
 – Receive digest (now-24h) with /digest`
 
-var MENU_KEYBOARD = [][]tgbotapi.InlineKeyboardButton{
-	{
-		tgbotapi.NewInlineKeyboardButtonData("📄 Feed list", "menu_list"),
-		tgbotapi.NewInlineKeyboardButtonData("👈 Digest (now-24h)", "menu_digest"),
-	},
-}
-
-var RETURN_TO_MENU_KEYBOARD = [][]tgbotapi.InlineKeyboardButton{
-	{tgbotapi.NewInlineKeyboardButtonData("⬅️ Return to menu", "menu")},
-}
+var (
+	MENU_KEYBOARD = [][]tgbotapi.InlineKeyboardButton{
+		{
+			tgbotapi.NewInlineKeyboardButtonData("📄 Feed list", "menu_list"),
+			tgbotapi.NewInlineKeyboardButtonData("👈 Digest (now-24h)", "menu_digest"),
+		},
+	}
+	RETURN_TO_MENU_KEYBOARD = [][]tgbotapi.InlineKeyboardButton{
+		{tgbotapi.NewInlineKeyboardButtonData("⬅️ Return to menu", "menu")},
+	}
+)
 
 type Bot struct {
 	api          *tgbotapi.BotAPI
@@ -44,7 +45,7 @@ type Bot struct {
 	allowedUsers []int64
 }
 
-func NewBot(
+func New(
 	token string,
 	db *database.Database,
 	fetcher *feed.FeedFetcher,

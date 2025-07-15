@@ -14,14 +14,14 @@ import (
 	"telekilogram/model"
 )
 
-//go:embed migrations/*.sql
-var migrationsFS embed.FS
-
 type Database struct {
 	db *sql.DB
 }
 
-func NewDatabase(dbPath string) (*Database, error) {
+//go:embed migrations/*.sql
+var migrationsFS embed.FS
+
+func New(dbPath string) (*Database, error) {
 	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		return nil, err
