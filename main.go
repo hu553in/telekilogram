@@ -11,7 +11,7 @@ import (
 	"github.com/joho/godotenv"
 
 	"telekilogram/bot"
-	db "telekilogram/database"
+	"telekilogram/database"
 	"telekilogram/feed"
 	"telekilogram/scheduler"
 )
@@ -34,7 +34,7 @@ func main() {
 		dbPath = "./db"
 	}
 
-	db, err := db.NewDatabase(dbPath)
+	db, err := database.NewDatabase(dbPath)
 	if err != nil {
 		slog.Error("Failed to initialize db", slog.Any("error", err))
 		return

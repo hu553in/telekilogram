@@ -3,16 +3,16 @@ package feed
 import (
 	"errors"
 
-	db "telekilogram/database"
+	"telekilogram/database"
 	"telekilogram/model"
 )
 
 type FeedFetcher struct {
-	db     *db.Database
+	db     *database.Database
 	parser *FeedParser
 }
 
-func NewFeedFetcher(db *db.Database) *FeedFetcher {
+func NewFeedFetcher(db *database.Database) *FeedFetcher {
 	return &FeedFetcher{
 		db:     db,
 		parser: NewFeedParser(),

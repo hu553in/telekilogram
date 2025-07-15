@@ -11,7 +11,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
 	"telekilogram/common"
-	db "telekilogram/database"
+	"telekilogram/database"
 	"telekilogram/feed"
 	"telekilogram/model"
 )
@@ -39,14 +39,14 @@ var RETURN_TO_MENU_KEYBOARD = [][]tgbotapi.InlineKeyboardButton{
 
 type Bot struct {
 	api          *tgbotapi.BotAPI
-	db           *db.Database
+	db           *database.Database
 	fetcher      *feed.FeedFetcher
 	allowedUsers []int64
 }
 
 func NewBot(
 	token string,
-	db *db.Database,
+	db *database.Database,
 	fetcher *feed.FeedFetcher,
 	allowedUsers []int64,
 ) (*Bot, error) {
