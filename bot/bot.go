@@ -10,6 +10,7 @@ import (
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
+	"telekilogram/common"
 	db "telekilogram/database"
 	"telekilogram/feed"
 	"telekilogram/model"
@@ -158,7 +159,12 @@ func (b *Bot) handleListCommand(chatID int64, userID int64) error {
 		feedTitle, err := feed.GetFeedTitle(f.URL)
 		errs = append(errs, err)
 
-		message.WriteString(fmt.Sprintf("%d. [%s](%s)\n", i+1, feedTitle, f.URL))
+		message.WriteString(fmt.Sprintf(
+			"%d\\. [%s](%s)\n",
+			i+1,
+			common.EscapeMarkdown(feedTitle),
+			f.URL,
+		))
 
 		button := tgbotapi.NewInlineKeyboardButtonData(
 			fmt.Sprintf("Unfollow %d", i+1),
@@ -306,7 +312,10 @@ func (b *Bot) sendMessageWithKeyboard(
 	keyboard [][]tgbotapi.InlineKeyboardButton,
 ) error {
 	msg := tgbotapi.NewMessage(chatID, text)
-	msg.ParseMode = "Markdown"
+
+	// https://core.telegram.org/bots/api#markdownv2-style
+	msg.ParseMode = "MarkdownV2"
+
 	msg.DisableWebPagePreview = true
 	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(keyboard...)
 

@@ -42,6 +42,7 @@ func (fp *FeedParser) ParseFeed(feed model.Feed) ([]model.Post, error) {
 				Title:     item.Title,
 				URL:       item.Link,
 				FeedTitle: parsedFeed.Title,
+				FeedURL:   feed.URL,
 			}
 			newPosts = append(newPosts, post)
 		}

@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"net/url"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/mmcdole/gofeed"
 
+	"telekilogram/common"
 	"telekilogram/model"
 )
 
@@ -52,32 +52,43 @@ func FormatPostsAsMessages(posts []model.Post) []string {
 	headerLength := currentMessage.Len()
 
 	feedGroups := make(map[string][]model.Post)
-	for i, post := range posts {
+	feedURLs := make(map[string]string)
+
+	for _, post := range posts {
 		feedTitle := post.FeedTitle
 		if feedTitle == "" {
-			feedTitle = "<unknown feed " + strconv.Itoa(i) + ">"
+			feedTitle = post.FeedURL
 		}
 		feedGroups[feedTitle] = append(feedGroups[feedTitle], post)
+		feedURLs[feedTitle] = post.FeedURL
 	}
 
 	for feedTitle, feedPosts := range feedGroups {
-		feedHeader := fmt.Sprintf("📌 **%s**\n\n", feedTitle)
+		feedHeader := fmt.Sprintf(
+			"📌 **[%s](%s)**\n\n",
+			common.EscapeMarkdown(feedTitle),
+			feedURLs[feedTitle],
+		)
 
 		if currentMessage.Len()+len(feedHeader) > MAX_MSG_LENGTH {
 			messages = append(messages, currentMessage.String())
 			currentMessage.Reset()
-			currentMessage.WriteString("📰 *New posts (continue)*\n\n")
+			currentMessage.WriteString("📰 *New posts \\(continue\\)*\n\n")
 		}
 
 		currentMessage.WriteString(feedHeader)
 
 		for _, post := range feedPosts {
-			bulletPoint := fmt.Sprintf("– [%s](%s)\n", post.Title, post.URL)
+			bulletPoint := fmt.Sprintf(
+				"– [%s](%s)\n",
+				common.EscapeMarkdown(post.Title),
+				post.URL,
+			)
 
 			if currentMessage.Len()+len(bulletPoint) > MAX_MSG_LENGTH {
 				messages = append(messages, currentMessage.String())
 				currentMessage.Reset()
-				currentMessage.WriteString("📰 *New posts (continue)*\n\n")
+				currentMessage.WriteString("📰 *New posts \\(continue\\)*\n\n")
 				currentMessage.WriteString(feedHeader)
 			}
 

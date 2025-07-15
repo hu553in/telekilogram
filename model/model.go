@@ -10,4 +10,5 @@ type Post struct {
 	Title     string
 	URL       string
 	FeedTitle string
+	FeedURL   string
 }
