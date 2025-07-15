@@ -37,7 +37,7 @@ func (fr *FeedFetcher) FetchFeeds(userID *int64) (map[int64][]model.Post, error)
 	}
 
 	userPosts := make(map[int64][]model.Post)
-	errs := []error{}
+	errs := make([]error, 0, len(feeds))
 
 	for _, f := range feeds {
 		newPosts, err := fr.parser.ParseFeed(f)

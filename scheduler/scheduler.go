@@ -42,7 +42,7 @@ func (s *Scheduler) checkAllFeeds() {
 		return
 	}
 
-	errs := []error{}
+	errs := make([]error, 0, len(userPosts))
 	for userID, posts := range userPosts {
 		errs = append(errs, s.bot.SendNewPosts(userID, posts))
 	}

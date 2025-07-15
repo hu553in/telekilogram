@@ -93,8 +93,8 @@ func (b *Bot) SendNewPosts(chatID int64, posts []model.Post) error {
 		return nil
 	}
 
-	errs := []error{}
 	messages := feed.FormatPostsAsMessages(posts)
+	errs := make([]error, 0, len(messages))
 	for _, message := range messages {
 		errs = append(errs, b.sendMessageWithKeyboard(
 			chatID,
@@ -152,7 +152,7 @@ func (b *Bot) handleListCommand(chatID int64, userID int64) error {
 	message.WriteString(fmt.Sprintf("🔍 *Found %d feeds:*\n\n", len(feeds)))
 
 	var keyboard [][]tgbotapi.InlineKeyboardButton
-	errs := []error{}
+	errs := make([]error, 0, len(feeds)+1)
 
 	for i, f := range feeds {
 		feedTitle, err := feed.GetFeedTitle(f.URL)
@@ -183,7 +183,7 @@ func (b *Bot) handleMenuCommand(chatID int64) error {
 
 func (b *Bot) handleDigestCommand(chatID int64, userID int64) error {
 	userPosts, err := b.fetcher.FetchFeeds(&userID)
-	errs := []error{}
+	errs := make([]error, 0, len(userPosts)+1)
 	errs = append(errs, err)
 
 	if len(userPosts) == 0 {
@@ -210,7 +210,7 @@ func (b *Bot) handleRandomText(text string, userID int64, message *tgbotapi.Mess
 		)
 	}
 
-	errs := []error{}
+	errs := make([]error, 0, len(feedURLs)+1)
 	savedCount := 0
 	for _, feedURL := range feedURLs {
 		err := b.db.AddFeed(userID, feedURL)
