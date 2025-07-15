@@ -13,6 +13,10 @@ SERVICE_PATH="/etc/systemd/system/${APP_NAME}.service"
 echo "TOKEN=\"${TOKEN}\"" > ${ENV_PATH}
 echo "ALLOWED_USERS=\"${ALLOWED_USERS}\"" >> ${ENV_PATH}
 
+# stop old instance ignoring errors
+
+systemctl stop "$APP_NAME" || true
+
 # create service
 
 cat << EOF > "$SERVICE_PATH"
@@ -35,7 +39,8 @@ EOF
 chmod 644 "$SERVICE_PATH"
 chmod +x $APP_DIR/app
 
-# enable and restart service
+# enable and start service
 
 systemctl daemon-reload
-systemctl enable --now "$SERVICE_PATH"
+systemctl enable "$APP_NAME"
+systemctl start "$APP_NAME"
