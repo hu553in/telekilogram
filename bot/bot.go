@@ -16,7 +16,7 @@ import (
 	"telekilogram/model"
 )
 
-const WELCOME_TEXT = `🤖 *Welcome to Telekilogram!*
+const welcomeText = `🤖 *Welcome to Telekilogram!*
 
 I'm your feed assistant. I can help you:
 
@@ -27,13 +27,13 @@ I'm your feed assistant. I can help you:
 – Receive digest (now-24h) with /digest`
 
 var (
-	MENU_KEYBOARD = [][]tgbotapi.InlineKeyboardButton{
+	menuKeyboard = [][]tgbotapi.InlineKeyboardButton{
 		{
 			tgbotapi.NewInlineKeyboardButtonData("📄 Feed list", "menu_list"),
 			tgbotapi.NewInlineKeyboardButtonData("👈 Digest (now-24h)", "menu_digest"),
 		},
 	}
-	RETURN_TO_MENU_KEYBOARD = [][]tgbotapi.InlineKeyboardButton{
+	returnKeyboard = [][]tgbotapi.InlineKeyboardButton{
 		{tgbotapi.NewInlineKeyboardButtonData("⬅️ Return to menu", "menu")},
 	}
 )
@@ -101,7 +101,7 @@ func (b *Bot) SendNewPosts(chatID int64, posts []model.Post) error {
 		errs = append(errs, b.sendMessageWithKeyboard(
 			chatID,
 			message,
-			RETURN_TO_MENU_KEYBOARD,
+			returnKeyboard,
 		))
 	}
 
@@ -145,8 +145,8 @@ func (b *Bot) handleListCommand(chatID int64, userID int64) error {
 	if len(feeds) == 0 {
 		return b.sendMessageWithKeyboard(
 			chatID,
-			"✖️ Feed list is empty.",
-			RETURN_TO_MENU_KEYBOARD,
+			"✖️ Feed list is empty\\.",
+			returnKeyboard,
 		)
 	}
 
@@ -174,18 +174,18 @@ func (b *Bot) handleListCommand(chatID int64, userID int64) error {
 		keyboard = append(keyboard, []tgbotapi.InlineKeyboardButton{button})
 	}
 
-	keyboard = append(keyboard, RETURN_TO_MENU_KEYBOARD...)
+	keyboard = append(keyboard, returnKeyboard...)
 	errs = append(errs, b.sendMessageWithKeyboard(chatID, message.String(), keyboard))
 
 	return errors.Join(errs...)
 }
 
 func (b *Bot) handleStartCommand(chatID int64) error {
-	return b.sendMessageWithKeyboard(chatID, WELCOME_TEXT, MENU_KEYBOARD)
+	return b.sendMessageWithKeyboard(chatID, welcomeText, menuKeyboard)
 }
 
 func (b *Bot) handleMenuCommand(chatID int64) error {
-	return b.sendMessageWithKeyboard(chatID, "❔ Choose an option:", MENU_KEYBOARD)
+	return b.sendMessageWithKeyboard(chatID, "❔ Choose an option:", menuKeyboard)
 }
 
 func (b *Bot) handleDigestCommand(chatID int64, userID int64) error {
@@ -196,8 +196,8 @@ func (b *Bot) handleDigestCommand(chatID int64, userID int64) error {
 	if len(userPosts) == 0 {
 		errs = append(errs, b.sendMessageWithKeyboard(
 			chatID,
-			"✖️ Feed list is empty.",
-			RETURN_TO_MENU_KEYBOARD,
+			"✖️ Feed list is empty\\.",
+			returnKeyboard,
 		))
 	}
 
@@ -212,8 +212,8 @@ func (b *Bot) handleRandomText(text string, userID int64, message *tgbotapi.Mess
 	if len(feedURLs) == 0 {
 		return b.sendMessageWithKeyboard(
 			message.Chat.ID,
-			"✖️ Valid feed URLs are not found. Ignoring.",
-			RETURN_TO_MENU_KEYBOARD,
+			"✖️ Valid feed URLs are not found. Ignoring\\.",
+			returnKeyboard,
 		)
 	}
 
@@ -231,21 +231,21 @@ func (b *Bot) handleRandomText(text string, userID int64, message *tgbotapi.Mess
 		if savedCount == len(feedURLs) {
 			errs = append(errs, b.sendMessageWithKeyboard(
 				message.Chat.ID,
-				"✅ Saved.",
-				RETURN_TO_MENU_KEYBOARD,
+				"✅ Saved\\.",
+				returnKeyboard,
 			))
 		} else {
 			errs = append(errs, b.sendMessageWithKeyboard(
 				message.Chat.ID,
-				"❌ Partially saved with errors.",
-				RETURN_TO_MENU_KEYBOARD,
+				"❌ Partially saved with errors\\.",
+				returnKeyboard,
 			))
 		}
 	} else {
 		errs = append(errs, b.sendMessageWithKeyboard(
 			message.Chat.ID,
-			"❌ Failed to save anything.",
-			RETURN_TO_MENU_KEYBOARD,
+			"❌ Failed to save anything\\.",
+			returnKeyboard,
 		))
 	}
 
@@ -263,12 +263,12 @@ func (b *Bot) handleCallbackQuery(callback *tgbotapi.CallbackQuery) error {
 			if err = b.db.RemoveFeed(feedID); err != nil {
 				_, sendErr := b.api.Request(tgbotapi.NewCallback(
 					callback.ID,
-					"❌ Failed to remove feed.",
+					"❌ Failed to remove feed\\.",
 				))
 				return errors.Join(err, sendErr)
 			}
 
-			_, err = b.api.Request(tgbotapi.NewCallback(callback.ID, "✅ Feed is removed."))
+			_, err = b.api.Request(tgbotapi.NewCallback(callback.ID, "✅ Feed is removed\\."))
 			if err != nil {
 				return err
 			}

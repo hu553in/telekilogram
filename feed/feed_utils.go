@@ -12,7 +12,7 @@ import (
 	"telekilogram/model"
 )
 
-const MAX_MSG_LENGTH = 4096
+const msgMaxLength = 4096
 
 var urlRegex = regexp.MustCompile(`https://[^\s]+`)
 
@@ -70,7 +70,7 @@ func FormatPostsAsMessages(posts []model.Post) []string {
 			feedURLs[feedTitle],
 		)
 
-		if currentMessage.Len()+len(feedHeader) > MAX_MSG_LENGTH {
+		if currentMessage.Len()+len(feedHeader) > msgMaxLength {
 			messages = append(messages, currentMessage.String())
 			currentMessage.Reset()
 			currentMessage.WriteString("📰 *New posts \\(continue\\)*\n\n")
@@ -85,7 +85,7 @@ func FormatPostsAsMessages(posts []model.Post) []string {
 				post.URL,
 			)
 
-			if currentMessage.Len()+len(bulletPoint) > MAX_MSG_LENGTH {
+			if currentMessage.Len()+len(bulletPoint) > msgMaxLength {
 				messages = append(messages, currentMessage.String())
 				currentMessage.Reset()
 				currentMessage.WriteString("📰 *New posts \\(continue\\)*\n\n")
