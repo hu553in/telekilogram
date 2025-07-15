@@ -1,1 +1,1 @@
-DROP TABLE IF EXISTS feeds;
+drop table if exists feeds;

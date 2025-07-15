@@ -10,10 +10,10 @@ import (
 
 	"github.com/joho/godotenv"
 
-	bot "telekilogram/bot"
+	"telekilogram/bot"
 	db "telekilogram/database"
-	feed "telekilogram/feed"
-	scheduler "telekilogram/scheduler"
+	"telekilogram/feed"
+	"telekilogram/scheduler"
 )
 
 func main() {
@@ -55,7 +55,7 @@ func main() {
 		if err != nil {
 			slog.Error(
 				"ALLOWED_USERS must be empty or comma-separated int64 list",
-				slog.Any("ALLOWED_USERS", allowedUsersRaw),
+				slog.String("ALLOWED_USERS", allowedUsersRaw),
 			)
 			return
 		}

@@ -1,6 +1,6 @@
-CREATE TABLE IF NOT EXISTS feeds (
-	id INTEGER PRIMARY KEY AUTOINCREMENT,
-	user_id INTEGER NOT NULL,
-	url TEXT NOT NULL,
-	UNIQUE (user_id, url)
+create table if not exists feeds (
+  id integer primary key autoincrement,
+  user_id integer not null,
+  url text not null,
+  unique (user_id, url)
 );

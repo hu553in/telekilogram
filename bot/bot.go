@@ -11,8 +11,8 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
 	db "telekilogram/database"
-	feed "telekilogram/feed"
-	model "telekilogram/model"
+	"telekilogram/feed"
+	"telekilogram/model"
 )
 
 const WELCOME_TEXT = `🤖 *Welcome to Telekilogram!*

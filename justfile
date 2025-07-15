@@ -3,11 +3,11 @@ bin_name := "app"
 
 set dotenv-load := true
 
+all: check run
+
 [private]
 ensure-build-dir:
     mkdir -p {{build_dir}}
-
-all: check run
 
 check: install-deps lint fmt test build
 

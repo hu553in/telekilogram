@@ -5,7 +5,7 @@ import (
 
 	"github.com/mmcdole/gofeed"
 
-	model "telekilogram/model"
+	"telekilogram/model"
 )
 
 type FeedParser struct {

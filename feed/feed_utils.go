@@ -9,7 +9,7 @@ import (
 
 	"github.com/mmcdole/gofeed"
 
-	model "telekilogram/model"
+	"telekilogram/model"
 )
 
 const MAX_MSG_LENGTH = 4096

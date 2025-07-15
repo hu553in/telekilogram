@@ -11,7 +11,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 
 	"log/slog"
-	model "telekilogram/model"
+	"telekilogram/model"
 )
 
 //go:embed migrations/*.sql
@@ -55,19 +55,19 @@ func NewDatabase(dbPath string) (*Database, error) {
 }
 
 func (d *Database) AddFeed(userID int64, feedURL string) error {
-	query := "INSERT OR IGNORE INTO feeds (user_id, url) VALUES (?, ?)"
+	query := "insert or ignore into feeds (user_id, url) values (?, ?)"
 	_, err := d.db.Exec(query, userID, feedURL)
 	return err
 }
 
 func (d *Database) RemoveFeed(feedID int64) error {
-	query := "DELETE FROM feeds WHERE id = ?"
+	query := "delete from feeds where id = ?"
 	_, err := d.db.Exec(query, feedID)
 	return err
 }
 
 func (d *Database) GetUserFeeds(userID int64) ([]model.Feed, error) {
-	query := "SELECT id, url FROM feeds WHERE user_id = ?"
+	query := "select id, url from feeds where user_id = ?"
 	rows, err := d.db.Query(query, userID)
 	if err != nil {
 		return nil, err

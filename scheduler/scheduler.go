@@ -7,8 +7,8 @@ import (
 
 	"github.com/robfig/cron/v3"
 
-	bot "telekilogram/bot"
-	feed "telekilogram/feed"
+	"telekilogram/bot"
+	"telekilogram/feed"
 )
 
 type Scheduler struct {

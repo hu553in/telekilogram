@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	db "telekilogram/database"
-	model "telekilogram/model"
+	"telekilogram/model"
 )
 
 type FeedFetcher struct {
