@@ -65,7 +65,7 @@ func FormatPostsAsMessages(posts []model.Post) []string {
 
 	for feedTitle, feedPosts := range feedGroups {
 		feedHeader := fmt.Sprintf(
-			"📌 **[%s](%s)**\n\n",
+			"📌 *[%s](%s)*\n\n",
 			common.EscapeMarkdown(feedTitle),
 			feedURLs[feedTitle],
 		)
