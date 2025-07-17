@@ -161,18 +161,6 @@ func (b *Bot) handleListCommand(chatID int64, userID int64) error {
 	var errs []error
 
 	for i, f := range feeds {
-		if f.Title == "" {
-			title, err := b.fetcher.FetchFeedTitle(f.URL)
-			if err != nil {
-				errs = append(errs, err)
-			}
-
-			if title == "" {
-				title = f.URL
-			}
-			f.Title = title
-		}
-
 		message.WriteString(fmt.Sprintf(
 			"%d\\. [%s](%s)\n",
 			i+1,

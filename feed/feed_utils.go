@@ -116,8 +116,13 @@ func validateFeed(feedURL string) (*model.Feed, error) {
 		return nil, err
 	}
 
+	title := parsed.Title
+	if title == "" {
+		title = feedURL
+	}
+
 	return &model.Feed{
 		URL:   feedURL,
-		Title: parsed.Title,
+		Title: title,
 	}, nil
 }

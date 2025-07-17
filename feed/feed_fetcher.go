@@ -28,15 +28,6 @@ func NewFeedFetcher(db *database.Database) *FeedFetcher {
 	}
 }
 
-func (fr *FeedFetcher) FetchFeedTitle(feedURL string) (string, error) {
-	parsed, err := parser.ParseURL(feedURL)
-	if err != nil {
-		return "", err
-	}
-
-	return parsed.Title, nil
-}
-
 func (fr *FeedFetcher) FetchAllFeeds() (map[int64][]model.Post, error) {
 	return fr.FetchFeeds(nil)
 }
