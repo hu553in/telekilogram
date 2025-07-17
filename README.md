@@ -26,6 +26,7 @@ Feed assistant Telegram bot written in Go.
 - [x] Fill `README.md`
 - [x] Optimize work with slices
 - [x] Optimize performance of business functions (they are really slow)
+- [ ] Understand if it is needed to implement graceful shutdown, etc.
 - [ ] Add debug logs
 - [ ] Trim whitespaces in any significant places
 - [ ] Ensure that there's no blank windows between periods
