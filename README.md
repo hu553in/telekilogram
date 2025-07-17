@@ -28,6 +28,7 @@ Feed assistant Telegram bot written in Go.
 - [x] Optimize performance of business functions (they are really slow)
 - [ ] Understand if it is needed to implement graceful shutdown, etc.
 - [ ] Add debug logs
+- [ ] Add tests (at least for critical functionality)
 - [ ] Trim whitespaces in any significant places
 - [ ] Ensure that there's no blank windows between periods
 - [ ] Add context to errors (`fmt.Errorf`)
