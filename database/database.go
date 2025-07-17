@@ -54,9 +54,15 @@ func New(dbPath string) (*Database, error) {
 	return &Database{db: db}, nil
 }
 
-func (d *Database) AddFeed(userID int64, feedURL string) error {
-	query := "insert or ignore into feeds (user_id, url) values (?, ?)"
-	_, err := d.db.Exec(query, userID, feedURL)
+func (d *Database) AddFeed(userID int64, feedURL string, feedTitle string) error {
+	query := "insert or ignore into feeds (user_id, url, title) values (?, ?, ?)"
+	_, err := d.db.Exec(query, userID, feedURL, feedTitle)
+	return err
+}
+
+func (d *Database) UpdateFeedTitle(feedID int64, feedTitle string) error {
+	query := "update feeds set title = ? where id = ?"
+	_, err := d.db.Exec(query, feedTitle, feedID)
 	return err
 }
 
@@ -66,8 +72,8 @@ func (d *Database) RemoveFeed(feedID int64) error {
 	return err
 }
 
-func (d *Database) GetUserFeeds(userID int64) ([]model.Feed, error) {
-	query := "select id, url from feeds where user_id = ?"
+func (d *Database) GetUserFeeds(userID int64) ([]model.UserFeed, error) {
+	query := "select id, url, title from feeds where user_id = ?"
 	rows, err := d.db.Query(query, userID)
 	if err != nil {
 		return nil, err
@@ -78,10 +84,10 @@ func (d *Database) GetUserFeeds(userID int64) ([]model.Feed, error) {
 		}
 	}()
 
-	var feeds []model.Feed
+	var feeds []model.UserFeed
 	for rows.Next() {
-		var f model.Feed
-		if err := rows.Scan(&f.ID, &f.URL); err != nil {
+		var f model.UserFeed
+		if err := rows.Scan(&f.ID, &f.URL, &f.Title); err != nil {
 			return nil, err
 		}
 
@@ -91,8 +97,8 @@ func (d *Database) GetUserFeeds(userID int64) ([]model.Feed, error) {
 	return feeds, nil
 }
 
-func (d *Database) GetAllFeeds() ([]model.Feed, error) {
-	query := `SELECT id, user_id, url FROM feeds`
+func (d *Database) GetAllFeeds() ([]model.UserFeed, error) {
+	query := `select id, user_id, url, title from feeds`
 	rows, err := d.db.Query(query)
 	if err != nil {
 		return nil, err
@@ -103,10 +109,10 @@ func (d *Database) GetAllFeeds() ([]model.Feed, error) {
 		}
 	}()
 
-	var feeds []model.Feed
+	var feeds []model.UserFeed
 	for rows.Next() {
-		var f model.Feed
-		if err := rows.Scan(&f.ID, &f.UserID, &f.URL); err != nil {
+		var f model.UserFeed
+		if err := rows.Scan(&f.ID, &f.UserID, &f.URL, &f.Title); err != nil {
 			return nil, err
 		}
 

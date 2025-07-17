@@ -96,13 +96,17 @@ func (b *Bot) SendNewPosts(chatID int64, posts []model.Post) error {
 	}
 
 	messages := feed.FormatPostsAsMessages(posts)
-	errs := make([]error, 0, len(messages))
+	var errs []error
+
 	for _, message := range messages {
-		errs = append(errs, b.sendMessageWithKeyboard(
+		err := b.sendMessageWithKeyboard(
 			chatID,
 			message,
 			returnKeyboard,
-		))
+		)
+		if err != nil {
+			errs = append(errs, err)
+		}
 	}
 
 	return errors.Join(errs...)
@@ -145,7 +149,7 @@ func (b *Bot) handleListCommand(chatID int64, userID int64) error {
 	if len(feeds) == 0 {
 		return b.sendMessageWithKeyboard(
 			chatID,
-			"✖️ Feed list is empty\\.",
+			"✖️ Feed list is empty or there is a bug\\.",
 			returnKeyboard,
 		)
 	}
@@ -153,17 +157,26 @@ func (b *Bot) handleListCommand(chatID int64, userID int64) error {
 	var message strings.Builder
 	message.WriteString(fmt.Sprintf("🔍 *Found %d feeds:*\n\n", len(feeds)))
 
-	var keyboard [][]tgbotapi.InlineKeyboardButton
-	errs := make([]error, 0, len(feeds)+1)
+	keyboard := make([][]tgbotapi.InlineKeyboardButton, 0, len(feeds)+len(returnKeyboard))
+	var errs []error
 
 	for i, f := range feeds {
-		feedTitle, err := feed.GetFeedTitle(f.URL)
-		errs = append(errs, err)
+		if f.Title == "" {
+			title, err := b.fetcher.FetchFeedTitle(f.URL)
+			if err != nil {
+				errs = append(errs, err)
+			}
+
+			if title == "" {
+				title = f.URL
+			}
+			f.Title = title
+		}
 
 		message.WriteString(fmt.Sprintf(
 			"%d\\. [%s](%s)\n",
 			i+1,
-			common.EscapeMarkdown(feedTitle),
+			common.EscapeMarkdown(f.Title),
 			f.URL,
 		))
 
@@ -175,7 +188,11 @@ func (b *Bot) handleListCommand(chatID int64, userID int64) error {
 	}
 
 	keyboard = append(keyboard, returnKeyboard...)
-	errs = append(errs, b.sendMessageWithKeyboard(chatID, message.String(), keyboard))
+
+	err = b.sendMessageWithKeyboard(chatID, message.String(), keyboard)
+	if err != nil {
+		errs = append(errs, err)
+	}
 
 	return errors.Join(errs...)
 }
@@ -189,64 +206,87 @@ func (b *Bot) handleMenuCommand(chatID int64) error {
 }
 
 func (b *Bot) handleDigestCommand(chatID int64, userID int64) error {
+	var errs []error
+
 	userPosts, err := b.fetcher.FetchFeeds(&userID)
-	errs := make([]error, 0, len(userPosts)+1)
-	errs = append(errs, err)
+	if err != nil {
+		errs = append(errs, err)
+	}
 
 	if len(userPosts) == 0 {
-		errs = append(errs, b.sendMessageWithKeyboard(
+		err := b.sendMessageWithKeyboard(
 			chatID,
-			"✖️ Feed list is empty\\.",
+			"✖️ Feed list is empty or there is a bug\\.",
 			returnKeyboard,
-		))
+		)
+		if err != nil {
+			errs = append(errs, err)
+		}
 	}
 
 	for _, posts := range userPosts {
-		errs = append(errs, b.SendNewPosts(chatID, posts))
+		err := b.SendNewPosts(chatID, posts)
+		if err != nil {
+			errs = append(errs, err)
+		}
 	}
 	return errors.Join(errs...)
 }
 
 func (b *Bot) handleRandomText(text string, userID int64, message *tgbotapi.Message) error {
-	feedURLs := feed.FindValidFeedURLs(text)
-	if len(feedURLs) == 0 {
-		return b.sendMessageWithKeyboard(
+	feeds, err := feed.FindValidFeeds(text)
+	if len(feeds) == 0 {
+		return errors.Join(err, b.sendMessageWithKeyboard(
 			message.Chat.ID,
-			"✖️ Valid feed URLs are not found. Ignoring\\.",
+			"✖️ Valid feed URLs are not found\\. Ignoring\\.",
 			returnKeyboard,
-		)
+		))
 	}
 
-	errs := make([]error, 0, len(feedURLs)+1)
-	savedCount := 0
-	for _, feedURL := range feedURLs {
-		err := b.db.AddFeed(userID, feedURL)
+	var errs []error
+	if err != nil {
 		errs = append(errs, err)
-		if err == nil {
-			savedCount++
+	}
+
+	savedCount := 0
+	for _, feed := range feeds {
+		err := b.db.AddFeed(userID, feed.URL, feed.Title)
+		if err != nil {
+			errs = append(errs, err)
+			continue
 		}
+		savedCount++
 	}
 
 	if savedCount > 0 {
-		if savedCount == len(feedURLs) {
-			errs = append(errs, b.sendMessageWithKeyboard(
+		if savedCount == len(feeds) {
+			err := b.sendMessageWithKeyboard(
 				message.Chat.ID,
 				"✅ Saved\\.",
 				returnKeyboard,
-			))
+			)
+			if err != nil {
+				errs = append(errs, err)
+			}
 		} else {
-			errs = append(errs, b.sendMessageWithKeyboard(
+			err := b.sendMessageWithKeyboard(
 				message.Chat.ID,
 				"❌ Partially saved with errors\\.",
 				returnKeyboard,
-			))
+			)
+			if err != nil {
+				errs = append(errs, err)
+			}
 		}
 	} else {
-		errs = append(errs, b.sendMessageWithKeyboard(
+		err := b.sendMessageWithKeyboard(
 			message.Chat.ID,
 			"❌ Failed to save anything\\.",
 			returnKeyboard,
-		))
+		)
+		if err != nil {
+			errs = append(errs, err)
+		}
 	}
 
 	return errors.Join(errs...)

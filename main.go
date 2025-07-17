@@ -51,7 +51,7 @@ func main() {
 	var allowedUsers []int64
 
 	for _, userIDStr := range allowedUsersStr {
-		userID, err := strconv.ParseInt(strings.TrimSpace(userIDStr), 10, 64)
+		userID, err := strconv.ParseInt(userIDStr, 10, 64)
 		if err != nil {
 			slog.Error(
 				"ALLOWED_USERS must be empty or comma-separated int64 list",

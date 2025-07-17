@@ -24,8 +24,10 @@ Feed assistant Telegram bot written in Go.
 ## Roadmap
 
 - [x] Fill `README.md`
+- [x] Optimize work with slices
+- [x] Optimize performance of business functions (they are really slow)
 - [ ] Add debug logs
-- [ ] Optimize performance of business functions (they are really slow)
+- [ ] Trim whitespaces in any significant places
 - [ ] Ensure that there's no blank windows between periods
 - [ ] Add context to errors (`fmt.Errorf`)
 - [ ] Replace 00:00 UTC with setting per user

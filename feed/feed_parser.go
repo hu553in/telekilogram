@@ -5,30 +5,40 @@ import (
 
 	"github.com/mmcdole/gofeed"
 
+	"telekilogram/database"
 	"telekilogram/model"
 )
 
+var parser = gofeed.NewParser()
+
 type FeedParser struct {
-	parser *gofeed.Parser
+	db *database.Database
 }
 
-func NewFeedParser() *FeedParser {
+func NewFeedParser(db *database.Database) *FeedParser {
 	return &FeedParser{
-		parser: gofeed.NewParser(),
+		db: db,
 	}
 }
 
-func (fp *FeedParser) ParseFeed(feed model.Feed) ([]model.Post, error) {
-	parsedFeed, err := fp.parser.ParseURL(feed.URL)
+func (fp *FeedParser) ParseFeed(feed model.UserFeed) ([]model.Post, error) {
+	parsed, err := parser.ParseURL(feed.URL)
 	if err != nil {
 		return nil, err
+	}
+
+	if parsed.Title != feed.Title {
+		err = fp.db.UpdateFeedTitle(feed.ID, parsed.Title)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	var newPosts []model.Post
 	now := time.Now().Round(time.Hour)
 	cutoffTime := now.AddDate(0, 0, -1)
 
-	for _, item := range parsedFeed.Items {
+	for _, item := range parsed.Items {
 		publishedTime := now
 
 		if item.PublishedParsed != nil {
@@ -41,7 +51,7 @@ func (fp *FeedParser) ParseFeed(feed model.Feed) ([]model.Post, error) {
 			post := model.Post{
 				Title:     item.Title,
 				URL:       item.Link,
-				FeedTitle: parsedFeed.Title,
+				FeedTitle: parsed.Title,
 				FeedURL:   feed.URL,
 			}
 			newPosts = append(newPosts, post)

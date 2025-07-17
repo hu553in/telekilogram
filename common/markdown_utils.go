@@ -3,7 +3,7 @@ package common
 import "strings"
 
 // taken from https://core.telegram.org/bots/api#markdownv2-style
-var markdownSpecialChars = [18]string{
+var markdownSpecialChars = []string{
 	"_", "*", "[", "]", "(", ")",
 	"~", "`", ">", "#", "+", "-",
 	"=", "|", "{", "}", ".", "!",

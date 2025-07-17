@@ -24,8 +24,17 @@ type UserPosts struct {
 func NewFeedFetcher(db *database.Database) *FeedFetcher {
 	return &FeedFetcher{
 		db:     db,
-		parser: NewFeedParser(),
+		parser: NewFeedParser(db),
 	}
+}
+
+func (fr *FeedFetcher) FetchFeedTitle(feedURL string) (string, error) {
+	parsed, err := parser.ParseURL(feedURL)
+	if err != nil {
+		return "", err
+	}
+
+	return parsed.Title, nil
 }
 
 func (fr *FeedFetcher) FetchAllFeeds() (map[int64][]model.Post, error) {
@@ -33,7 +42,7 @@ func (fr *FeedFetcher) FetchAllFeeds() (map[int64][]model.Post, error) {
 }
 
 func (fr *FeedFetcher) FetchFeeds(userID *int64) (map[int64][]model.Post, error) {
-	var feeds []model.Feed
+	var feeds []model.UserFeed
 	var err error
 
 	if userID == nil {
@@ -77,7 +86,7 @@ func (fr *FeedFetcher) FetchFeeds(userID *int64) (map[int64][]model.Post, error)
 	}()
 
 	userPostsMap := make(map[int64][]model.Post)
-	errs := make([]error, 0, len(feeds))
+	var errs []error
 
 	var readWg sync.WaitGroup
 	readWg.Add(2)

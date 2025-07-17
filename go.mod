@@ -9,6 +9,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.28
 	github.com/mmcdole/gofeed v1.3.0
 	github.com/robfig/cron/v3 v3.0.1
+	mvdan.cc/xurls/v2 v2.6.0
 )
 
 require (

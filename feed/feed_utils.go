@@ -1,12 +1,12 @@
 package feed
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
-	"regexp"
 	"strings"
 
-	"github.com/mmcdole/gofeed"
+	"mvdan.cc/xurls/v2"
 
 	"telekilogram/common"
 	"telekilogram/model"
@@ -14,34 +14,31 @@ import (
 
 const msgMaxLength = 4096
 
-var urlRegex = regexp.MustCompile(`https://[^\s]+`)
-
-func FindValidFeedURLs(text string) []string {
-	urls := extractURLs(text)
-	var feedURLs []string
-
-	for _, u := range urls {
-		u = strings.TrimSpace(u)
-		if isValidFeedURL(u) {
-			feedURLs = append(feedURLs, u)
-		}
-	}
-
-	return feedURLs
+type FeedGroupKey struct {
+	FeedTitle string
+	FeedURL   string
 }
 
-func GetFeedTitle(feedURL string) (string, error) {
-	parser := &FeedParser{parser: gofeed.NewParser()}
-
-	parsed, err := parser.parser.ParseURL(feedURL)
+func FindValidFeeds(text string) ([]model.Feed, error) {
+	re, err := xurls.StrictMatchingScheme("https://")
 	if err != nil {
-		return feedURL, err
+		return nil, err
 	}
 
-	if parsed.Title == "" {
-		return feedURL, nil
+	urls := re.FindAllString(text, -1)
+	feeds := make([]model.Feed, 0, len(urls))
+	var errs []error
+
+	for _, u := range urls {
+		feed, err := validateFeed(u)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		feeds = append(feeds, *feed)
 	}
-	return parsed.Title, nil
+
+	return feeds, errors.Join(errs...)
 }
 
 func FormatPostsAsMessages(posts []model.Post) []string {
@@ -51,23 +48,26 @@ func FormatPostsAsMessages(posts []model.Post) []string {
 	currentMessage.WriteString("📰 *New posts*\n\n")
 	headerLength := currentMessage.Len()
 
-	feedGroups := make(map[string][]model.Post)
-	feedURLs := make(map[string]string)
+	feedGroups := make(map[FeedGroupKey][]model.Post)
 
 	for _, post := range posts {
 		feedTitle := post.FeedTitle
 		if feedTitle == "" {
 			feedTitle = post.FeedURL
 		}
-		feedGroups[feedTitle] = append(feedGroups[feedTitle], post)
-		feedURLs[feedTitle] = post.FeedURL
+
+		key := FeedGroupKey{
+			FeedTitle: feedTitle,
+			FeedURL:   post.FeedURL,
+		}
+		feedGroups[key] = append(feedGroups[key], post)
 	}
 
-	for feedTitle, feedPosts := range feedGroups {
+	for key, feedPosts := range feedGroups {
 		feedHeader := fmt.Sprintf(
 			"📌 *[%s](%s)*\n\n",
-			common.EscapeMarkdown(feedTitle),
-			feedURLs[feedTitle],
+			common.EscapeMarkdown(key.FeedTitle),
+			key.FeedURL,
 		)
 
 		if currentMessage.Len()+len(feedHeader) > msgMaxLength {
@@ -105,21 +105,19 @@ func FormatPostsAsMessages(posts []model.Post) []string {
 	return messages
 }
 
-func extractURLs(text string) []string {
-	return urlRegex.FindAllString(text, -1)
-}
-
-func isValidFeedURL(feedURL string) bool {
-	parsedURL, err := url.Parse(feedURL)
+func validateFeed(feedURL string) (*model.Feed, error) {
+	_, err := url.Parse(feedURL)
 	if err != nil {
-		return false
+		return nil, err
 	}
 
-	if parsedURL.Scheme != "https" {
-		return false
+	parsed, err := parser.ParseURL(feedURL)
+	if err != nil {
+		return nil, err
 	}
 
-	fp := gofeed.NewParser()
-	_, err = fp.ParseURL(feedURL)
-	return err == nil
+	return &model.Feed{
+		URL:   feedURL,
+		Title: parsed.Title,
+	}, nil
 }
