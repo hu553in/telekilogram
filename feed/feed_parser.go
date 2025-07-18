@@ -23,7 +23,7 @@ func NewFeedParser(db *database.Database) *FeedParser {
 	}
 }
 
-func (fp *FeedParser) ParseFeed(feed model.UserFeed) ([]model.Post, error) {
+func (fp *FeedParser) ParseFeed(feed *model.UserFeed) ([]model.Post, error) {
 	parsed, err := parser.ParseURL(feed.URL)
 	if err != nil {
 		return nil, err

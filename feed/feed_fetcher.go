@@ -28,18 +28,18 @@ func NewFeedFetcher(db *database.Database) *FeedFetcher {
 	}
 }
 
-func (fr *FeedFetcher) FetchAllFeeds() (map[int64][]model.Post, error) {
-	return fr.FetchFeeds(nil)
+func (ff *FeedFetcher) FetchAllFeeds() (map[int64][]model.Post, error) {
+	return ff.FetchFeeds(nil)
 }
 
-func (fr *FeedFetcher) FetchFeeds(userID *int64) (map[int64][]model.Post, error) {
+func (ff *FeedFetcher) FetchFeeds(userID *int64) (map[int64][]model.Post, error) {
 	var feeds []model.UserFeed
 	var err error
 
 	if userID == nil {
-		feeds, err = fr.db.GetAllFeeds()
+		feeds, err = ff.db.GetAllFeeds()
 	} else {
-		feeds, err = fr.db.GetUserFeeds(*userID)
+		feeds, err = ff.db.GetUserFeeds(*userID)
 	}
 	if err != nil {
 		return nil, err
@@ -48,56 +48,58 @@ func (fr *FeedFetcher) FetchFeeds(userID *int64) (map[int64][]model.Post, error)
 	var writeWg sync.WaitGroup
 
 	concurrency := min(maxConcurrency, len(feeds))
-	semCh := make(chan int, concurrency)
+	semCh := make(chan struct{}, concurrency)
 
 	userPostCh := make(chan UserPosts, concurrency)
 	errCh := make(chan error, concurrency)
 
 	for _, f := range feeds {
 		writeWg.Add(1)
-		semCh <- 1
+		semCh <- struct{}{}
 
-		go func() {
+		go func(
+			f *model.UserFeed,
+			writeWg *sync.WaitGroup,
+			semCh chan struct{},
+			userPostCh chan UserPosts,
+			errCh chan error,
+			ff *FeedFetcher,
+		) {
 			defer writeWg.Done()
 
-			posts, err := fr.parser.ParseFeed(f)
+			posts, err := ff.parser.ParseFeed(f)
 			userPostCh <- UserPosts{userID: f.UserID, posts: posts}
 			errCh <- err
 
 			<-semCh
-		}()
+		}(&f, &writeWg, semCh, userPostCh, errCh, ff)
 	}
 
-	go func() {
+	go func(
+		writeWg *sync.WaitGroup,
+		semCh chan struct{},
+		userPostCh chan UserPosts,
+		errCh chan error,
+	) {
 		writeWg.Wait()
 		close(semCh)
 
 		close(userPostCh)
 		close(errCh)
-	}()
+	}(&writeWg, semCh, userPostCh, errCh)
 
 	userPostsMap := make(map[int64][]model.Post)
 	var errs []error
 
-	var readWg sync.WaitGroup
-	readWg.Add(2)
+	for userPosts := range userPostCh {
+		userPostsMap[userPosts.userID] = append(
+			userPostsMap[userPosts.userID],
+			userPosts.posts...,
+		)
+	}
+	for err := range errCh {
+		errs = append(errs, err)
+	}
 
-	go func() {
-		for userPosts := range userPostCh {
-			userPostsMap[userPosts.userID] = append(
-				userPostsMap[userPosts.userID],
-				userPosts.posts...,
-			)
-		}
-		readWg.Done()
-	}()
-	go func() {
-		for err := range errCh {
-			errs = append(errs, err)
-		}
-		readWg.Done()
-	}()
-
-	readWg.Wait()
 	return userPostsMap, errors.Join(errs...)
 }

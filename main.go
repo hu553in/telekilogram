@@ -63,14 +63,14 @@ func main() {
 	}
 
 	fetcher := feed.NewFeedFetcher(db)
-	bot, err := bot.New(token, db, fetcher, allowedUsers)
+	botInst, err := bot.New(token, db, fetcher, allowedUsers)
 	if err != nil {
 		slog.Error("Failed to initialize bot", slog.Any("error", err))
 		return
 	}
 	slog.Info("Bot is initialized")
 
-	scheduler := scheduler.New(bot, fetcher)
+	scheduler := scheduler.New(botInst, fetcher)
 
 	if err = scheduler.Start(); err != nil {
 		slog.Error("Failed to start scheduler", slog.Any("error", err))
@@ -80,9 +80,9 @@ func main() {
 	slog.Info("Scheduler is started")
 
 	slog.Info("Starting bot...")
-	go func() {
+	go func(bot *bot.Bot) {
 		bot.Start()
-	}()
+	}(botInst)
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
