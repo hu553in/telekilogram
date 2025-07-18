@@ -16,15 +16,20 @@ import (
 	"telekilogram/model"
 )
 
-const welcomeText = `🤖 *Welcome to Telekilogram!*
+const welcomeText = `🤖 *Welcome to Telekilogram\!*
 
-I'm your feed assistant. I can help you:
+I'm your feed assistant\. I can help you:
 
 – Follow feeds by sending me URLs
 – Get feed list with /list
 – Unfollow feeds directly from list
-– Receive auto-digest (now-24h) automatically each 00:00 UTC
-– Receive digest (now-24h) with /digest`
+– Receive auto\-digest \(now\-24h\) automatically each 00:00 UTC
+– Receive digest \(now\-24h\) with /digest`
+
+const filterText = `Telekilogram does not support filtering\.\.\.
+
+But you can use awesome [siftrss](https://siftrss.com/) instead\! ✨
+It's totally great\. Bot author is also using it\.`
 
 var (
 	menuKeyboard = [][]tgbotapi.InlineKeyboardButton{
@@ -119,7 +124,7 @@ func (b *Bot) handleMessage(message *tgbotapi.Message) error {
 	switch {
 	case strings.HasPrefix(text, "/start"):
 		return b.withSpinner(message.Chat.ID, func() error {
-			return b.handleStartCommand(message.Chat.ID)
+			return b.sendMessageWithKeyboard(message.Chat.ID, welcomeText, menuKeyboard)
 		})
 	case strings.HasPrefix(text, "/menu"):
 		return b.withSpinner(message.Chat.ID, func() error {
@@ -132,6 +137,10 @@ func (b *Bot) handleMessage(message *tgbotapi.Message) error {
 	case strings.HasPrefix(text, "/digest"):
 		return b.withSpinner(message.Chat.ID, func() error {
 			return b.handleDigestCommand(message.Chat.ID, userID)
+		})
+	case strings.HasPrefix(text, "/filter"):
+		return b.withSpinner(message.Chat.ID, func() error {
+			return b.sendMessageWithKeyboard(message.Chat.ID, filterText, menuKeyboard)
 		})
 	default:
 		return b.withSpinner(message.Chat.ID, func() error {
@@ -183,10 +192,6 @@ func (b *Bot) handleListCommand(chatID int64, userID int64) error {
 	}
 
 	return errors.Join(errs...)
-}
-
-func (b *Bot) handleStartCommand(chatID int64) error {
-	return b.sendMessageWithKeyboard(chatID, welcomeText, menuKeyboard)
 }
 
 func (b *Bot) handleMenuCommand(chatID int64) error {
