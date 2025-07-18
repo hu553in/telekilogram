@@ -26,11 +26,11 @@ Feed assistant Telegram bot written in Go.
 - [x] Fill `README.md`
 - [x] Optimize work with slices
 - [x] Optimize performance of business functions (they are really slow)
+- [x] Ensure that there's no blank windows between periods
 - [ ] Understand if it is needed to implement graceful shutdown, etc.
 - [ ] Add debug logs
 - [ ] Add tests (at least for critical functionality)
 - [ ] Trim whitespaces in any significant places
-- [ ] Ensure that there's no blank windows between periods
 - [ ] Add context to errors (`fmt.Errorf`)
 - [ ] Replace 00:00 UTC with setting per user
 - [ ] Add possibility to set inclusion and/or exclusion filters for posts

@@ -9,6 +9,8 @@ import (
 	"telekilogram/model"
 )
 
+const gracePeriod = 10 * time.Minute
+
 var parser = gofeed.NewParser()
 
 type FeedParser struct {
@@ -36,7 +38,7 @@ func (fp *FeedParser) ParseFeed(feed model.UserFeed) ([]model.Post, error) {
 
 	var newPosts []model.Post
 	now := time.Now().Round(time.Hour)
-	cutoffTime := now.AddDate(0, 0, -1)
+	cutoffTime := now.Add(-24*time.Hour - gracePeriod)
 
 	for _, item := range parsed.Items {
 		publishedTime := now
