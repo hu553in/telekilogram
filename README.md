@@ -9,8 +9,9 @@ Feed assistant Telegram bot written in Go.
 - Follow feeds by sending URLs to bot
 - Get feed list with `/list`
 - Unfollow feeds directly from list
-- Receive auto-digest (now-24h) automatically each 00:00 UTC
-- Receive digest (now-24h) with `/digest`
+- Receive 24h auto-digest daily automatically (default - 00:00 UTC)
+- Receive 24h digest with `/digest`
+- Configure user settings with `/settings`
 
 ## Development
 
@@ -29,11 +30,12 @@ Feed assistant Telegram bot written in Go.
 - [x] Ensure that there's no blank windows between periods
 - [x] Add possibility to set inclusion and/or exclusion filters for posts
   - decided to use awesome [siftrss](https://siftrss.com/) instead ✨
+- [x] Replace 00:00 UTC with setting per user
 - [ ] Understand if it is needed to implement graceful shutdown, etc.
+- [ ] Rethink unfollow keyboard (now it's row for each feed)
 - [ ] Add debug logs
 - [ ] Add tests (at least for critical functionality)
 - [ ] Trim whitespaces in any significant places
 - [ ] Add context to errors (`fmt.Errorf`)
-- [ ] Replace 00:00 UTC with setting per user
 - [ ] Deploy using Docker instead of `systemd` service (optional)
 - [ ] Migrate to https://github.com/go-telegram/bot (optional)

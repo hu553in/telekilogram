@@ -22,6 +22,7 @@ func main() {
 		slog.Error("Failed to load .env file", slog.Any("error", err))
 		return
 	}
+	slog.Info(".env file is loaded")
 
 	token := os.Getenv("TOKEN")
 	if token == "" {

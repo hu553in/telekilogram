@@ -27,7 +27,7 @@ func New(bot *bot.Bot, fetcher *feed.FeedFetcher) *Scheduler {
 }
 
 func (s *Scheduler) Start() error {
-	if _, err := s.cron.AddFunc("0 0 * * *", s.checkAllFeeds); err != nil {
+	if _, err := s.cron.AddFunc("0 * * * *", s.checkHourFeeds); err != nil {
 		return err
 	}
 
@@ -35,8 +35,14 @@ func (s *Scheduler) Start() error {
 	return nil
 }
 
-func (s *Scheduler) checkAllFeeds() {
-	userPosts, err := s.fetcher.FetchAllFeeds()
+func (s *Scheduler) Stop() {
+	s.cron.Stop()
+}
+
+func (s *Scheduler) checkHourFeeds() {
+	hourUTC := int64(time.Now().UTC().Hour())
+
+	userPosts, err := s.fetcher.FetchHourFeeds(hourUTC)
 	if err != nil {
 		slog.Error("Failed to fetch all feeds", slog.Any("error", err))
 		return
@@ -54,8 +60,4 @@ func (s *Scheduler) checkAllFeeds() {
 	if err != nil {
 		slog.Error("Failed to send user posts", slog.Any("error", err))
 	}
-}
-
-func (s *Scheduler) Stop() {
-	s.cron.Stop()
 }

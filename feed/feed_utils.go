@@ -12,9 +12,7 @@ import (
 	"telekilogram/model"
 )
 
-const msgMaxLength = 4096
-
-type FeedGroupKey struct {
+type feedGroupKey struct {
 	FeedTitle string
 	FeedURL   string
 }
@@ -48,7 +46,7 @@ func FormatPostsAsMessages(posts []model.Post) []string {
 	currentMessage.WriteString("📰 *New posts*\n\n")
 	headerLength := currentMessage.Len()
 
-	feedGroups := make(map[FeedGroupKey][]model.Post)
+	feedGroups := make(map[feedGroupKey][]model.Post)
 
 	for _, post := range posts {
 		feedTitle := post.FeedTitle
@@ -56,7 +54,7 @@ func FormatPostsAsMessages(posts []model.Post) []string {
 			feedTitle = post.FeedURL
 		}
 
-		key := FeedGroupKey{
+		key := feedGroupKey{
 			FeedTitle: feedTitle,
 			FeedURL:   post.FeedURL,
 		}
@@ -70,7 +68,7 @@ func FormatPostsAsMessages(posts []model.Post) []string {
 			key.FeedURL,
 		)
 
-		if currentMessage.Len()+len(feedHeader) > msgMaxLength {
+		if currentMessage.Len()+len(feedHeader) > telegramMessageMaxLength {
 			messages = append(messages, currentMessage.String())
 			currentMessage.Reset()
 			currentMessage.WriteString("📰 *New posts \\(continue\\)*\n\n")
@@ -85,7 +83,7 @@ func FormatPostsAsMessages(posts []model.Post) []string {
 				post.URL,
 			)
 
-			if currentMessage.Len()+len(bulletPoint) > msgMaxLength {
+			if currentMessage.Len()+len(bulletPoint) > telegramMessageMaxLength {
 				messages = append(messages, currentMessage.String())
 				currentMessage.Reset()
 				currentMessage.WriteString("📰 *New posts \\(continue\\)*\n\n")
@@ -111,7 +109,7 @@ func validateFeed(feedURL string) (*model.Feed, error) {
 		return nil, err
 	}
 
-	parsed, err := parser.ParseURL(feedURL)
+	parsed, err := libParser.ParseURL(feedURL)
 	if err != nil {
 		return nil, err
 	}

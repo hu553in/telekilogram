@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
@@ -14,33 +15,6 @@ import (
 	"telekilogram/database"
 	"telekilogram/feed"
 	"telekilogram/model"
-)
-
-const welcomeText = `🤖 *Welcome to Telekilogram\!*
-
-I'm your feed assistant\. I can help you:
-
-– Follow feeds by sending me URLs
-– Get feed list with /list
-– Unfollow feeds directly from list
-– Receive auto\-digest \(now\-24h\) automatically each 00:00 UTC
-– Receive digest \(now\-24h\) with /digest`
-
-const filterText = `Telekilogram does not support filtering\.\.\.
-
-But you can use awesome [siftrss](https://siftrss.com/) instead\! ✨
-It's totally great\. Bot author is also using it\.`
-
-var (
-	menuKeyboard = [][]tgbotapi.InlineKeyboardButton{
-		{
-			tgbotapi.NewInlineKeyboardButtonData("📄 Feed list", "menu_list"),
-			tgbotapi.NewInlineKeyboardButtonData("👈 Digest (now-24h)", "menu_digest"),
-		},
-	}
-	returnKeyboard = [][]tgbotapi.InlineKeyboardButton{
-		{tgbotapi.NewInlineKeyboardButtonData("⬅️ Return to menu", "menu")},
-	}
 )
 
 type Bot struct {
@@ -142,6 +116,10 @@ func (b *Bot) handleMessage(message *tgbotapi.Message) error {
 		return b.withSpinner(message.Chat.ID, func() error {
 			return b.sendMessageWithKeyboard(message.Chat.ID, filterText, menuKeyboard)
 		})
+	case strings.HasPrefix(text, "/settings"):
+		return b.withSpinner(message.Chat.ID, func() error {
+			return b.handleSettingsCommand(message.Chat.ID, userID)
+		})
 	default:
 		return b.withSpinner(message.Chat.ID, func() error {
 			return b.handleRandomText(text, userID, message)
@@ -195,13 +173,13 @@ func (b *Bot) handleListCommand(chatID int64, userID int64) error {
 }
 
 func (b *Bot) handleMenuCommand(chatID int64) error {
-	return b.sendMessageWithKeyboard(chatID, "❔ Choose an option:", menuKeyboard)
+	return b.sendMessageWithKeyboard(chatID, "❔ *Choose an option:*", menuKeyboard)
 }
 
 func (b *Bot) handleDigestCommand(chatID int64, userID int64) error {
 	var errs []error
 
-	userPosts, err := b.fetcher.FetchFeeds(&userID)
+	userPosts, err := b.fetcher.FetchUserFeeds(userID)
 	if err != nil {
 		errs = append(errs, err)
 	}
@@ -223,6 +201,34 @@ func (b *Bot) handleDigestCommand(chatID int64, userID int64) error {
 			errs = append(errs, err)
 		}
 	}
+	return errors.Join(errs...)
+}
+
+func (b *Bot) handleSettingsCommand(chatID int64, userID int64) error {
+	var errs []error
+
+	settings, err := b.db.GetUserSettingsWithDefault(userID)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	currentUTC := time.Now().UTC().Format("15:04")
+
+	hourUTC := settings.AutoDigestHourUTC
+	hourUTCStr := fmt.Sprintf("%d:00", hourUTC)
+	if hourUTC < 10 {
+		hourUTCStr = fmt.Sprintf("0%s", hourUTCStr)
+	}
+
+	err = b.sendMessageWithKeyboard(
+		chatID,
+		fmt.Sprintf(settingsText, currentUTC, hourUTCStr),
+		settingsAutoDigestHourUTCKeyboard,
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
 	return errors.Join(errs...)
 }
 
@@ -286,29 +292,8 @@ func (b *Bot) handleRandomText(text string, userID int64, message *tgbotapi.Mess
 }
 
 func (b *Bot) handleCallbackQuery(callback *tgbotapi.CallbackQuery) error {
-	if feedIDStr, ok := strings.CutPrefix(callback.Data, "unfollow_"); ok {
-		return b.withSpinner(callback.Message.Chat.ID, func() error {
-			feedID, err := strconv.ParseInt(feedIDStr, 10, 64)
-			if err != nil {
-				return err
-			}
-
-			if err = b.db.RemoveFeed(feedID); err != nil {
-				_, sendErr := b.api.Request(tgbotapi.NewCallback(
-					callback.ID,
-					"❌ Failed to remove feed\\.",
-				))
-				return errors.Join(err, sendErr)
-			}
-
-			_, err = b.api.Request(tgbotapi.NewCallback(callback.ID, "✅ Feed is removed\\."))
-			if err != nil {
-				return err
-			}
-
-			return b.handleListCommand(callback.Message.Chat.ID, callback.From.ID)
-		})
-	} else if callback.Data == "menu" {
+	switch callback.Data {
+	case "menu":
 		_, err := b.api.Request(tgbotapi.NewCallback(callback.ID, ""))
 		if err != nil {
 			return err
@@ -317,7 +302,7 @@ func (b *Bot) handleCallbackQuery(callback *tgbotapi.CallbackQuery) error {
 		return b.withSpinner(callback.Message.Chat.ID, func() error {
 			return b.handleMenuCommand(callback.Message.Chat.ID)
 		})
-	} else if callback.Data == "menu_list" {
+	case "menu_list":
 		_, err := b.api.Request(tgbotapi.NewCallback(callback.ID, ""))
 		if err != nil {
 			return err
@@ -326,7 +311,7 @@ func (b *Bot) handleCallbackQuery(callback *tgbotapi.CallbackQuery) error {
 		return b.withSpinner(callback.Message.Chat.ID, func() error {
 			return b.handleListCommand(callback.Message.Chat.ID, callback.From.ID)
 		})
-	} else if callback.Data == "menu_digest" {
+	case "menu_digest":
 		_, err := b.api.Request(tgbotapi.NewCallback(callback.ID, ""))
 		if err != nil {
 			return err
@@ -335,9 +320,80 @@ func (b *Bot) handleCallbackQuery(callback *tgbotapi.CallbackQuery) error {
 		return b.withSpinner(callback.Message.Chat.ID, func() error {
 			return b.handleDigestCommand(callback.Message.Chat.ID, callback.From.ID)
 		})
+	case "menu_settings":
+		_, err := b.api.Request(tgbotapi.NewCallback(callback.ID, ""))
+		if err != nil {
+			return err
+		}
+
+		return b.withSpinner(callback.Message.Chat.ID, func() error {
+			return b.handleSettingsCommand(callback.Message.Chat.ID, callback.From.ID)
+		})
+	}
+
+	if feedIDStr, ok := strings.CutPrefix(callback.Data, "unfollow_"); ok {
+		return b.withSpinner(callback.Message.Chat.ID, func() error {
+			return b.handleUnfollowQuery(feedIDStr, callback)
+		})
+	}
+	if hourUTCStr, ok := strings.CutPrefix(callback.Data, "settings_auto_digest_hour_utc_"); ok {
+		return b.withSpinner(callback.Message.Chat.ID, func() error {
+			return b.handleSettingsAutoDigestHourUTCQuery(hourUTCStr, callback)
+		})
 	}
 
 	return nil
+}
+
+func (b *Bot) handleUnfollowQuery(feedIDStr string, callback *tgbotapi.CallbackQuery) error {
+	feedID, err := strconv.ParseInt(feedIDStr, 10, 64)
+	if err != nil {
+		return err
+	}
+
+	if err = b.db.RemoveFeed(feedID); err != nil {
+		_, sendErr := b.api.Request(tgbotapi.NewCallback(
+			callback.ID,
+			"❌ Failed to remove feed.",
+		))
+		return errors.Join(err, sendErr)
+	}
+
+	_, err = b.api.Request(tgbotapi.NewCallback(callback.ID, "✅ Feed is removed."))
+	if err != nil {
+		return err
+	}
+
+	return b.handleListCommand(callback.Message.Chat.ID, callback.From.ID)
+}
+
+func (b *Bot) handleSettingsAutoDigestHourUTCQuery(hourUTCStr string, callback *tgbotapi.CallbackQuery) error {
+	hourUTC, err := strconv.ParseInt(hourUTCStr, 10, 64)
+	if err != nil {
+		_, sendErr := b.api.Request(tgbotapi.NewCallback(
+			callback.ID,
+			"❌ Failed to update settings.",
+		))
+		return errors.Join(err, sendErr)
+	}
+
+	if err = b.db.UpsertUserSettings(&model.UserSettings{
+		UserID:            callback.From.ID,
+		AutoDigestHourUTC: hourUTC,
+	}); err != nil {
+		_, sendErr := b.api.Request(tgbotapi.NewCallback(
+			callback.ID,
+			"❌ Failed to update settings.",
+		))
+		return errors.Join(err, sendErr)
+	}
+
+	_, err = b.api.Request(tgbotapi.NewCallback(callback.ID, "✅ Settings are updated."))
+	if err != nil {
+		return err
+	}
+
+	return b.handleSettingsCommand(callback.Message.Chat.ID, callback.From.ID)
 }
 
 func (b *Bot) sendMessageWithKeyboard(

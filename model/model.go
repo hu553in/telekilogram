@@ -18,3 +18,13 @@ type Post struct {
 	FeedTitle string
 	FeedURL   string
 }
+
+type UserSettings struct {
+	UserID            int64
+	AutoDigestHourUTC int64
+}
+
+type UserPosts struct {
+	UserID int64
+	Posts  []Post
+}

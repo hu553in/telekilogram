@@ -2,23 +2,15 @@ package feed
 
 import (
 	"errors"
-	"runtime"
 	"sync"
 
 	"telekilogram/database"
 	"telekilogram/model"
 )
 
-var maxConcurrency = runtime.NumCPU() * 10
-
 type FeedFetcher struct {
 	db     *database.Database
 	parser *FeedParser
-}
-
-type UserPosts struct {
-	userID int64
-	posts  []model.Post
 }
 
 func NewFeedFetcher(db *database.Database) *FeedFetcher {
@@ -28,29 +20,31 @@ func NewFeedFetcher(db *database.Database) *FeedFetcher {
 	}
 }
 
-func (ff *FeedFetcher) FetchAllFeeds() (map[int64][]model.Post, error) {
-	return ff.FetchFeeds(nil)
-}
-
-func (ff *FeedFetcher) FetchFeeds(userID *int64) (map[int64][]model.Post, error) {
-	var feeds []model.UserFeed
-	var err error
-
-	if userID == nil {
-		feeds, err = ff.db.GetAllFeeds()
-	} else {
-		feeds, err = ff.db.GetUserFeeds(*userID)
-	}
+func (ff *FeedFetcher) FetchHourFeeds(hourUTC int64) (map[int64][]model.Post, error) {
+	feeds, err := ff.db.GetHourFeeds(hourUTC)
 	if err != nil {
 		return nil, err
 	}
 
+	return ff.fetchFeeds(feeds)
+}
+
+func (ff *FeedFetcher) FetchUserFeeds(userID int64) (map[int64][]model.Post, error) {
+	feeds, err := ff.db.GetUserFeeds(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return ff.fetchFeeds(feeds)
+}
+
+func (ff *FeedFetcher) fetchFeeds(feeds []model.UserFeed) (map[int64][]model.Post, error) {
 	var writeWg sync.WaitGroup
 
-	concurrency := min(maxConcurrency, len(feeds))
+	concurrency := min(fetchFeedsMaxConcurrency, len(feeds))
 	semCh := make(chan struct{}, concurrency)
 
-	userPostCh := make(chan UserPosts, concurrency)
+	userPostCh := make(chan model.UserPosts, concurrency)
 	errCh := make(chan error, concurrency)
 
 	for _, f := range feeds {
@@ -61,14 +55,14 @@ func (ff *FeedFetcher) FetchFeeds(userID *int64) (map[int64][]model.Post, error)
 			f *model.UserFeed,
 			writeWg *sync.WaitGroup,
 			semCh chan struct{},
-			userPostCh chan UserPosts,
+			userPostCh chan model.UserPosts,
 			errCh chan error,
 			ff *FeedFetcher,
 		) {
 			defer writeWg.Done()
 
 			posts, err := ff.parser.ParseFeed(f)
-			userPostCh <- UserPosts{userID: f.UserID, posts: posts}
+			userPostCh <- model.UserPosts{UserID: f.UserID, Posts: posts}
 			errCh <- err
 
 			<-semCh
@@ -78,7 +72,7 @@ func (ff *FeedFetcher) FetchFeeds(userID *int64) (map[int64][]model.Post, error)
 	go func(
 		writeWg *sync.WaitGroup,
 		semCh chan struct{},
-		userPostCh chan UserPosts,
+		userPostCh chan model.UserPosts,
 		errCh chan error,
 	) {
 		writeWg.Wait()
@@ -92,9 +86,9 @@ func (ff *FeedFetcher) FetchFeeds(userID *int64) (map[int64][]model.Post, error)
 	var errs []error
 
 	for userPosts := range userPostCh {
-		userPostsMap[userPosts.userID] = append(
-			userPostsMap[userPosts.userID],
-			userPosts.posts...,
+		userPostsMap[userPosts.UserID] = append(
+			userPostsMap[userPosts.UserID],
+			userPosts.Posts...,
 		)
 	}
 	for err := range errCh {
