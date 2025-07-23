@@ -1,7 +1,7 @@
 package scheduler
 
 import (
-	"errors"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -28,7 +28,7 @@ func New(bot *bot.Bot, fetcher *feed.FeedFetcher) *Scheduler {
 
 func (s *Scheduler) Start() error {
 	if _, err := s.cron.AddFunc("0 * * * *", s.checkHourFeeds); err != nil {
-		return err
+		return fmt.Errorf("failed to add cron job: %w", err)
 	}
 
 	s.cron.Start()
@@ -44,20 +44,20 @@ func (s *Scheduler) checkHourFeeds() {
 
 	userPosts, err := s.fetcher.FetchHourFeeds(hourUTC)
 	if err != nil {
-		slog.Error("Failed to fetch all feeds", slog.Any("error", err))
+		slog.Error("Failed to fetch all feeds",
+			slog.Int64("hourUTC", hourUTC),
+			slog.Any("err", err))
 		return
 	}
 
-	var errs []error
 	for userID, posts := range userPosts {
 		err := s.bot.SendNewPosts(userID, posts)
 		if err != nil {
-			errs = append(errs, err)
+			slog.Error("Failed to send user posts",
+				slog.Int64("hourUTC", hourUTC),
+				slog.Int64("userID", userID),
+				slog.Any("posts", posts),
+				slog.Any("err", err))
 		}
-	}
-
-	err = errors.Join(errs...)
-	if err != nil {
-		slog.Error("Failed to send user posts", slog.Any("error", err))
 	}
 }

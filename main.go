@@ -17,9 +17,13 @@ import (
 )
 
 func main() {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	slog.SetDefault(logger)
+
 	err := godotenv.Load()
 	if err != nil {
-		slog.Error("Failed to load .env file", slog.Any("error", err))
+		slog.Error("Failed to load .env file",
+			slog.Any("err", err))
 		return
 	}
 	slog.Info(".env file is loaded")
@@ -32,17 +36,22 @@ func main() {
 
 	dbPath := os.Getenv("DB_PATH")
 	if dbPath == "" {
+		slog.Info("Using default DB path")
 		dbPath = "./db"
 	}
 
 	db, err := database.New(dbPath)
 	if err != nil {
-		slog.Error("Failed to initialize db", slog.Any("error", err))
+		slog.Error("Failed to initialize db",
+			slog.String("dbPath", dbPath),
+			slog.Any("err", err))
 		return
 	}
 	defer func() {
 		if err := db.Close(); err != nil {
-			slog.Error("Failed to close db", slog.Any("error", err))
+			slog.Error("Failed to close db",
+				slog.String("dbPath", dbPath),
+				slog.Any("err", err))
 		}
 	}()
 	slog.Info("DB is initialized")
@@ -66,7 +75,8 @@ func main() {
 	fetcher := feed.NewFeedFetcher(db)
 	botInst, err := bot.New(token, db, fetcher, allowedUsers)
 	if err != nil {
-		slog.Error("Failed to initialize bot", slog.Any("error", err))
+		slog.Error("Failed to initialize bot",
+			slog.Any("err", err))
 		return
 	}
 	slog.Info("Bot is initialized")
@@ -74,18 +84,20 @@ func main() {
 	scheduler := scheduler.New(botInst, fetcher)
 
 	if err = scheduler.Start(); err != nil {
-		slog.Error("Failed to start scheduler", slog.Any("error", err))
+		slog.Error("Failed to start scheduler",
+			slog.Any("err", err))
 		return
 	}
 	defer scheduler.Stop()
 	slog.Info("Scheduler is started")
 
-	slog.Info("Starting bot...")
 	go func(bot *bot.Bot) {
 		bot.Start()
 	}(botInst)
+	slog.Info("Bot is started")
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	<-c
+	slog.Info("Exiting...")
 }

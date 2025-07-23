@@ -3,6 +3,7 @@ package database
 import (
 	"database/sql"
 	"embed"
+	"fmt"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/sqlite3"
@@ -22,69 +23,71 @@ type Database struct {
 var migrationsFS embed.FS
 
 func New(dbPath string) (*Database, error) {
-	db, err := sql.Open("sqlite3", dbPath)
+	dbFile, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to open DB file: %w", err)
 	}
 
-	dbDriver, err := sqlite3.WithInstance(db, &sqlite3.Config{})
+	dbInstance, err := sqlite3.WithInstance(dbFile, &sqlite3.Config{})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create DB instance: %w", err)
 	}
 
-	srcDriver, err := iofs.New(migrationsFS, "migrations")
+	srcInstance, err := iofs.New(migrationsFS, "migrations")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create source instance: %w", err)
 	}
 
 	m, err := migrate.NewWithInstance(
 		"iofs",
-		srcDriver,
+		srcInstance,
 		"sqlite3",
-		dbDriver,
+		dbInstance,
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create migrate instance: %w", err)
 	}
 
 	if err := m.Up(); err != nil {
 		if err != migrate.ErrNoChange {
-			return nil, err
+			return nil, fmt.Errorf("failed to apply migrations: %w", err)
 		}
 		slog.Info("No migrations to apply")
 	}
 
 	slog.Info("DB is migrated")
-	return &Database{db: db}, nil
+	return &Database{db: dbFile}, nil
 }
 
 func (d *Database) AddFeed(userID int64, feedURL string, feedTitle string) error {
 	query := "insert or ignore into feeds (user_id, url, title) values (?, ?, ?)"
 	_, err := d.db.Exec(query, userID, feedURL, feedTitle)
-	return err
+	return fmt.Errorf("failed to execute query: %w", err)
 }
 
 func (d *Database) UpdateFeedTitle(feedID int64, feedTitle string) error {
 	query := "update feeds set title = ? where id = ?"
 	_, err := d.db.Exec(query, feedTitle, feedID)
-	return err
+	return fmt.Errorf("failed to execute query: %w", err)
 }
 
 func (d *Database) RemoveFeed(feedID int64) error {
 	query := "delete from feeds where id = ?"
 	_, err := d.db.Exec(query, feedID)
-	return err
+	return fmt.Errorf("failed to execute query: %w", err)
 }
 
 func (d *Database) GetUserFeeds(userID int64) ([]model.UserFeed, error) {
 	query := "select id, url, title from feeds where user_id = ?"
 	rows, err := d.db.Query(query, userID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to execute query: %w", err)
 	}
 	defer func() {
 		if err := rows.Close(); err != nil {
-			slog.Error("Failed to close rows", slog.Any("error", err))
+			slog.Error("Failed to close rows",
+				slog.Int64("userID", userID),
+				slog.Any("err", err))
 		}
 	}()
 
@@ -92,12 +95,13 @@ func (d *Database) GetUserFeeds(userID int64) ([]model.UserFeed, error) {
 	for rows.Next() {
 		var f model.UserFeed
 		if err := rows.Scan(&f.ID, &f.URL, &f.Title); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to scan row: %w", err)
 		}
 
 		f.UserID = userID
 		feeds = append(feeds, f)
 	}
+
 	return feeds, nil
 }
 
@@ -121,11 +125,13 @@ func (d *Database) GetHourFeeds(hourUTC int64) ([]model.UserFeed, error) {
 
 	rows, err := d.db.Query(query, hourUTC)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to execute query: %w", err)
 	}
 	defer func() {
 		if err := rows.Close(); err != nil {
-			slog.Error("Failed to close rows", slog.Any("error", err))
+			slog.Error("Failed to close rows",
+				slog.Int64("hourUTC", hourUTC),
+				slog.Any("err", err))
 		}
 	}()
 
@@ -133,11 +139,12 @@ func (d *Database) GetHourFeeds(hourUTC int64) ([]model.UserFeed, error) {
 	for rows.Next() {
 		var f model.UserFeed
 		if err := rows.Scan(&f.ID, &f.UserID, &f.URL, &f.Title); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to scan row: %w", err)
 		}
 
 		feeds = append(feeds, f)
 	}
+
 	return feeds, nil
 }
 
@@ -146,11 +153,13 @@ func (d *Database) GetUserSettingsWithDefault(userID int64) (*model.UserSettings
 
 	rows, err := d.db.Query(query, userID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to execute query: %w", err)
 	}
 	defer func() {
 		if err := rows.Close(); err != nil {
-			slog.Error("Failed to close rows", slog.Any("error", err))
+			slog.Error("Failed to close rows",
+				slog.Int64("userID", userID),
+				slog.Any("err", err))
 		}
 	}()
 
@@ -163,7 +172,7 @@ func (d *Database) GetUserSettingsWithDefault(userID int64) (*model.UserSettings
 
 	var us model.UserSettings
 	if err := rows.Scan(&us.UserID, &us.AutoDigestHourUTC); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to scan row: %w", err)
 	}
 
 	return &us, nil
@@ -176,7 +185,7 @@ func (d *Database) UpsertUserSettings(userSettings *model.UserSettings) error {
 	set auto_digest_hour_utc = excluded.auto_digest_hour_utc`
 
 	_, err := d.db.Exec(query, userSettings.UserID, userSettings.AutoDigestHourUTC)
-	return err
+	return fmt.Errorf("failed to execute query: %w", err)
 }
 
 func (d *Database) Close() error {

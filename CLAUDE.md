@@ -39,9 +39,10 @@ The architecture follows a clear separation of concerns:
 
 ### Key Patterns
 
-- Uses structured logging with `log/slog` throughout
+- Uses structured logging with `log/slog` throughout with contextual information
 - Database migrations are embedded in the binary using `//go:embed`
-- Error handling uses `errors.Join()` for collecting multiple errors
+- Error handling uses `fmt.Errorf` for error context wrapping
+  and `errors.Join()` for collecting multiple errors
 - User authorization is handled via `ALLOWED_USERS` environment variable
   (comma-separated `int64` list)
 - Feed URLs are automatically detected from user messages and validated

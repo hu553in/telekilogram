@@ -1,8 +1,8 @@
 package feed
 
 import (
-	"errors"
 	"fmt"
+	"log/slog"
 	"net/url"
 	"strings"
 
@@ -20,23 +20,22 @@ type feedGroupKey struct {
 func FindValidFeeds(text string) ([]model.Feed, error) {
 	re, err := xurls.StrictMatchingScheme("https://")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create regexp: %w", err)
 	}
 
 	urls := re.FindAllString(text, -1)
 	feeds := make([]model.Feed, 0, len(urls))
-	var errs []error
 
 	for _, u := range urls {
 		feed, err := validateFeed(u)
 		if err != nil {
-			errs = append(errs, err)
-			continue
+			return nil, fmt.Errorf("failed to validate feed: %w", err)
 		}
+
 		feeds = append(feeds, *feed)
 	}
 
-	return feeds, errors.Join(errs...)
+	return feeds, nil
 }
 
 func FormatPostsAsMessages(posts []model.Post) []string {
@@ -51,6 +50,8 @@ func FormatPostsAsMessages(posts []model.Post) []string {
 	for _, post := range posts {
 		feedTitle := post.FeedTitle
 		if feedTitle == "" {
+			slog.Warn("Empty feed title",
+				slog.Any("post", post))
 			feedTitle = post.FeedURL
 		}
 
@@ -106,16 +107,18 @@ func FormatPostsAsMessages(posts []model.Post) []string {
 func validateFeed(feedURL string) (*model.Feed, error) {
 	_, err := url.Parse(feedURL)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse URL: %w", err)
 	}
 
 	parsed, err := libParser.ParseURL(feedURL)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse feed by URL: %w", err)
 	}
 
 	title := parsed.Title
 	if title == "" {
+		slog.Warn("Empty feed title",
+			slog.Any("feedURL", feedURL))
 		title = feedURL
 	}
 
