@@ -11,9 +11,9 @@ import (
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
-	"telekilogram/common"
 	"telekilogram/database"
 	"telekilogram/feed"
+	"telekilogram/markdown"
 	"telekilogram/model"
 )
 
@@ -151,7 +151,7 @@ func (b *Bot) handleListCommand(chatID int64, userID int64) error {
 		message.WriteString(fmt.Sprintf(
 			"%d\\. [%s](%s)\n",
 			i+1,
-			common.EscapeMarkdown(f.Title),
+			markdown.EscapeV2(f.Title),
 			f.URL,
 		))
 

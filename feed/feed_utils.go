@@ -8,7 +8,7 @@ import (
 
 	"mvdan.cc/xurls/v2"
 
-	"telekilogram/common"
+	"telekilogram/markdown"
 	"telekilogram/model"
 )
 
@@ -64,7 +64,7 @@ func FormatPostsAsMessages(posts []model.Post) []string {
 	for key, feedPosts := range feedGroups {
 		feedHeader := fmt.Sprintf(
 			"📌 *[%s](%s)*\n\n",
-			common.EscapeMarkdown(key.FeedTitle),
+			markdown.EscapeV2(key.FeedTitle),
 			key.FeedURL,
 		)
 
@@ -79,7 +79,7 @@ func FormatPostsAsMessages(posts []model.Post) []string {
 		for _, post := range feedPosts {
 			bulletPoint := fmt.Sprintf(
 				"– [%s](%s)\n",
-				common.EscapeMarkdown(post.Title),
+				markdown.EscapeV2(post.Title),
 				post.URL,
 			)
 

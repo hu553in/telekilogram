@@ -35,7 +35,7 @@ The architecture follows a clear separation of concerns:
 - **scheduler/**: Cron-based scheduler that automatically sends digests daily
   (default - 00:00 UTC)
 - **model/**: Data structures for `Feed`, `UserFeed`, `Post` and `UserSettings` entities
-- **common/**: Common code for sharing between other components
+- **markdown/**: Markdown utilities
 
 ### Key Patterns
 
@@ -68,5 +68,5 @@ Optional:
 
 - Supports feeds via `github.com/mmcdole/gofeed`
 - Filters posts to last 24 hours for digest functionality
-- Formats posts as Telegram messages with proper escaping
+- Formats posts as Telegram messages with MarkdownV2 escaping
 - Handles feed parsing errors gracefully

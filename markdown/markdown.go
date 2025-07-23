@@ -1,4 +1,4 @@
-package common
+package markdown
 
 import "strings"
 
@@ -9,7 +9,7 @@ var markdownSpecialChars = []string{
 	"=", "|", "{", "}", ".", "!",
 }
 
-func EscapeMarkdown(input string) string {
+func EscapeV2(input string) string {
 	escaped := input
 	for _, char := range markdownSpecialChars {
 		escaped = strings.ReplaceAll(escaped, char, "\\"+char)
