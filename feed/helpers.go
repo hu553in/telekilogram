@@ -69,7 +69,15 @@ func FormatPostsAsMessages(posts []models.Post) []string {
 			key.FeedURL,
 		)
 
-		if currentMessage.Len()+len(feedHeader) > telegramMessageMaxLength {
+		firstBulletPoint := fmt.Sprintf(
+			"– [%s](%s)\n",
+			markdown.EscapeV2(feedPosts[0].Title),
+			feedPosts[0].URL,
+		)
+
+		if currentMessage.Len()+
+			len(feedHeader)+
+			len(firstBulletPoint) > telegramMessageMaxLength {
 			messages = append(messages, currentMessage.String())
 			currentMessage.Reset()
 			currentMessage.WriteString("📰 *New posts \\(continue\\)*\n\n")
