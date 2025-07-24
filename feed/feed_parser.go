@@ -24,8 +24,7 @@ func (fp *FeedParser) ParseFeed(feed *model.UserFeed) ([]model.Post, error) {
 	}
 
 	if parsed.Title != feed.Title {
-		err = fp.db.UpdateFeedTitle(feed.ID, parsed.Title)
-		if err != nil {
+		if err := fp.db.UpdateFeedTitle(feed.ID, parsed.Title); err != nil {
 			return nil, err
 		}
 	}

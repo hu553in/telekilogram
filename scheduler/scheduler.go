@@ -51,8 +51,7 @@ func (s *Scheduler) checkHourFeeds() {
 	}
 
 	for userID, posts := range userPosts {
-		err := s.bot.SendNewPosts(userID, posts)
-		if err != nil {
+		if err := s.bot.SendNewPosts(userID, posts); err != nil {
 			slog.Error("Failed to send user posts",
 				slog.Int64("hourUTC", hourUTC),
 				slog.Int64("userID", userID),

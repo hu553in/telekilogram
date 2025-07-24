@@ -59,22 +59,35 @@ func New(dbPath string) (*Database, error) {
 	return &Database{db: dbFile}, nil
 }
 
-func (d *Database) AddFeed(userID int64, feedURL string, feedTitle string) error {
+func (d *Database) AddFeed(
+	userID int64,
+	feedURL string,
+	feedTitle string,
+) error {
 	query := "insert or ignore into feeds (user_id, url, title) values (?, ?, ?)"
-	_, err := d.db.Exec(query, userID, feedURL, feedTitle)
-	return fmt.Errorf("failed to execute query: %w", err)
+	if _, err := d.db.Exec(query, userID, feedURL, feedTitle); err != nil {
+		return fmt.Errorf("failed to execute query: %w", err)
+	}
+
+	return nil
 }
 
 func (d *Database) UpdateFeedTitle(feedID int64, feedTitle string) error {
 	query := "update feeds set title = ? where id = ?"
-	_, err := d.db.Exec(query, feedTitle, feedID)
-	return fmt.Errorf("failed to execute query: %w", err)
+	if _, err := d.db.Exec(query, feedTitle, feedID); err != nil {
+		return fmt.Errorf("failed to execute query: %w", err)
+	}
+
+	return nil
 }
 
 func (d *Database) RemoveFeed(feedID int64) error {
 	query := "delete from feeds where id = ?"
-	_, err := d.db.Exec(query, feedID)
-	return fmt.Errorf("failed to execute query: %w", err)
+	if _, err := d.db.Exec(query, feedID); err != nil {
+		return fmt.Errorf("failed to execute query: %w", err)
+	}
+
+	return nil
 }
 
 func (d *Database) GetUserFeeds(userID int64) ([]model.UserFeed, error) {
@@ -148,8 +161,12 @@ func (d *Database) GetHourFeeds(hourUTC int64) ([]model.UserFeed, error) {
 	return feeds, nil
 }
 
-func (d *Database) GetUserSettingsWithDefault(userID int64) (*model.UserSettings, error) {
-	query := `select user_id, auto_digest_hour_utc from user_settings where user_id = ?`
+func (d *Database) GetUserSettingsWithDefault(
+	userID int64,
+) (*model.UserSettings, error) {
+	query := `select user_id, auto_digest_hour_utc
+	from user_settings
+	where user_id = ?`
 
 	rows, err := d.db.Query(query, userID)
 	if err != nil {
@@ -184,8 +201,15 @@ func (d *Database) UpsertUserSettings(userSettings *model.UserSettings) error {
 	on conflict (user_id) do update
 	set auto_digest_hour_utc = excluded.auto_digest_hour_utc`
 
-	_, err := d.db.Exec(query, userSettings.UserID, userSettings.AutoDigestHourUTC)
-	return fmt.Errorf("failed to execute query: %w", err)
+	if _, err := d.db.Exec(
+		query,
+		userSettings.UserID,
+		userSettings.AutoDigestHourUTC,
+	); err != nil {
+		return fmt.Errorf("failed to execute query: %w", err)
+	}
+
+	return nil
 }
 
 func (d *Database) Close() error {

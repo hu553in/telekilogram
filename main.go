@@ -20,8 +20,7 @@ func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	slog.SetDefault(logger)
 
-	err := godotenv.Load()
-	if err != nil {
+	if err := godotenv.Load(); err != nil {
 		slog.Error("Failed to load .env file",
 			slog.Any("err", err))
 		return
@@ -83,7 +82,7 @@ func main() {
 
 	scheduler := scheduler.New(botInst, fetcher)
 
-	if err = scheduler.Start(); err != nil {
+	if err := scheduler.Start(); err != nil {
 		slog.Error("Failed to start scheduler",
 			slog.Any("err", err))
 		return

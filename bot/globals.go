@@ -39,6 +39,7 @@ var (
 	returnKeyboard = [][]tgbotapi.InlineKeyboardButton{
 		{tgbotapi.NewInlineKeyboardButtonData("⬅️ Return to menu", "menu")},
 	}
+	//nolint:lll
 	settingsAutoDigestHourUTCKeyboard = [][]tgbotapi.InlineKeyboardButton{
 		{
 			tgbotapi.NewInlineKeyboardButtonData("00", "settings_auto_digest_hour_utc_0"),

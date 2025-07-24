@@ -81,12 +81,11 @@ func (b *Bot) SendNewPosts(chatID int64, posts []model.Post) error {
 	messages := feed.FormatPostsAsMessages(posts)
 
 	for _, message := range messages {
-		err := b.sendMessageWithKeyboard(
+		if err := b.sendMessageWithKeyboard(
 			chatID,
 			message,
 			returnKeyboard,
-		)
-		if err != nil {
+		); err != nil {
 			return fmt.Errorf("failed to send message with keyboard: %w", err)
 		}
 	}
@@ -147,7 +146,11 @@ func (b *Bot) handleListCommand(chatID int64, userID int64) error {
 	var message strings.Builder
 	message.WriteString(fmt.Sprintf("🔍 *Found %d feeds:*\n\n", len(feeds)))
 
-	keyboard := make([][]tgbotapi.InlineKeyboardButton, 0, len(feeds)+len(returnKeyboard))
+	keyboard := make(
+		[][]tgbotapi.InlineKeyboardButton,
+		0,
+		len(feeds)+len(returnKeyboard),
+	)
 
 	for i, f := range feeds {
 		message.WriteString(fmt.Sprintf(
@@ -166,8 +169,15 @@ func (b *Bot) handleListCommand(chatID int64, userID int64) error {
 
 	keyboard = append(keyboard, returnKeyboard...)
 
-	err = b.sendMessageWithKeyboard(chatID, message.String(), keyboard)
-	return fmt.Errorf("failed to send message with keyboard: %w", err)
+	if err := b.sendMessageWithKeyboard(
+		chatID,
+		message.String(),
+		keyboard,
+	); err != nil {
+		return fmt.Errorf("failed to send message with keyboard: %w", err)
+	}
+
+	return nil
 }
 
 func (b *Bot) handleMenuCommand(chatID int64) error {
@@ -181,19 +191,17 @@ func (b *Bot) handleDigestCommand(chatID int64, userID int64) error {
 	}
 
 	if len(userPosts) == 0 {
-		err := b.sendMessageWithKeyboard(
+		if err := b.sendMessageWithKeyboard(
 			chatID,
 			"✖️ Feed list is empty or there is a bug\\.",
 			returnKeyboard,
-		)
-		if err != nil {
+		); err != nil {
 			return fmt.Errorf("failed to send message with keyboard: %w", err)
 		}
 	}
 
 	for _, posts := range userPosts {
-		err := b.SendNewPosts(chatID, posts)
-		if err != nil {
+		if err := b.SendNewPosts(chatID, posts); err != nil {
 			return fmt.Errorf("failed to send new posts: %w", err)
 		}
 	}
@@ -215,15 +223,22 @@ func (b *Bot) handleSettingsCommand(chatID int64, userID int64) error {
 		hourUTCStr = fmt.Sprintf("0%s", hourUTCStr)
 	}
 
-	err = b.sendMessageWithKeyboard(
+	if err := b.sendMessageWithKeyboard(
 		chatID,
 		fmt.Sprintf(settingsText, currentUTC, hourUTCStr),
 		settingsAutoDigestHourUTCKeyboard,
-	)
-	return fmt.Errorf("failed to send message with keyboard: %w", err)
+	); err != nil {
+		return fmt.Errorf("failed to send message with keyboard: %w", err)
+	}
+
+	return nil
 }
 
-func (b *Bot) handleRandomText(text string, userID int64, message *tgbotapi.Message) error {
+func (b *Bot) handleRandomText(
+	text string,
+	userID int64,
+	message *tgbotapi.Message,
+) error {
 	feeds, err := feed.FindValidFeeds(text)
 	if err != nil {
 		return fmt.Errorf("failed to find valid feeds: %w", err)
@@ -238,25 +253,29 @@ func (b *Bot) handleRandomText(text string, userID int64, message *tgbotapi.Mess
 	}
 
 	for _, feed := range feeds {
-		err := b.db.AddFeed(userID, feed.URL, feed.Title)
-		if err != nil {
+		if err := b.db.AddFeed(userID, feed.URL, feed.Title); err != nil {
 			return fmt.Errorf("failed to add feed: %w", err)
 		}
 	}
 
-	err = b.sendMessageWithKeyboard(
+	if err := b.sendMessageWithKeyboard(
 		message.Chat.ID,
 		"✅ Saved\\.",
 		returnKeyboard,
-	)
-	return fmt.Errorf("failed to send message with keyboard: %w", err)
+	); err != nil {
+		return fmt.Errorf("failed to send message with keyboard: %w", err)
+	}
+
+	return nil
 }
 
 func (b *Bot) handleCallbackQuery(callback *tgbotapi.CallbackQuery) error {
 	switch callback.Data {
 	case "menu":
-		_, err := b.api.Request(tgbotapi.NewCallback(callback.ID, ""))
-		if err != nil {
+		if _, err := b.api.Request(tgbotapi.NewCallback(
+			callback.ID,
+			"",
+		)); err != nil {
 			return fmt.Errorf("failed to send request: %w", err)
 		}
 
@@ -264,8 +283,10 @@ func (b *Bot) handleCallbackQuery(callback *tgbotapi.CallbackQuery) error {
 			return b.handleMenuCommand(callback.Message.Chat.ID)
 		})
 	case "menu_list":
-		_, err := b.api.Request(tgbotapi.NewCallback(callback.ID, ""))
-		if err != nil {
+		if _, err := b.api.Request(tgbotapi.NewCallback(
+			callback.ID,
+			"",
+		)); err != nil {
 			return fmt.Errorf("failed to send request: %w", err)
 		}
 
@@ -273,8 +294,10 @@ func (b *Bot) handleCallbackQuery(callback *tgbotapi.CallbackQuery) error {
 			return b.handleListCommand(callback.Message.Chat.ID, callback.From.ID)
 		})
 	case "menu_digest":
-		_, err := b.api.Request(tgbotapi.NewCallback(callback.ID, ""))
-		if err != nil {
+		if _, err := b.api.Request(tgbotapi.NewCallback(
+			callback.ID,
+			"",
+		)); err != nil {
 			return fmt.Errorf("failed to send request: %w", err)
 		}
 
@@ -282,8 +305,10 @@ func (b *Bot) handleCallbackQuery(callback *tgbotapi.CallbackQuery) error {
 			return b.handleDigestCommand(callback.Message.Chat.ID, callback.From.ID)
 		})
 	case "menu_settings":
-		_, err := b.api.Request(tgbotapi.NewCallback(callback.ID, ""))
-		if err != nil {
+		if _, err := b.api.Request(tgbotapi.NewCallback(
+			callback.ID,
+			"",
+		)); err != nil {
 			return fmt.Errorf("failed to send request: %w", err)
 		}
 
@@ -297,7 +322,10 @@ func (b *Bot) handleCallbackQuery(callback *tgbotapi.CallbackQuery) error {
 			return b.handleUnfollowQuery(feedIDStr, callback)
 		})
 	}
-	if hourUTCStr, ok := strings.CutPrefix(callback.Data, "settings_auto_digest_hour_utc_"); ok {
+	if hourUTCStr, ok := strings.CutPrefix(
+		callback.Data,
+		"settings_auto_digest_hour_utc_",
+	); ok {
 		return b.withSpinner(callback.Message.Chat.ID, func() error {
 			return b.handleSettingsAutoDigestHourUTCQuery(hourUTCStr, callback)
 		})
@@ -306,60 +334,76 @@ func (b *Bot) handleCallbackQuery(callback *tgbotapi.CallbackQuery) error {
 	return nil
 }
 
-func (b *Bot) handleUnfollowQuery(feedIDStr string, callback *tgbotapi.CallbackQuery) error {
+func (b *Bot) handleUnfollowQuery(
+	feedIDStr string,
+	callback *tgbotapi.CallbackQuery,
+) error {
 	feedID, err := strconv.ParseInt(feedIDStr, 10, 64)
 	if err != nil {
 		return fmt.Errorf("failed to parse feedID: %w", err)
 	}
 
-	if err = b.db.RemoveFeed(feedID); err != nil {
-		_, sendErr := b.api.Request(tgbotapi.NewCallback(
+	if err := b.db.RemoveFeed(feedID); err != nil {
+		errs := []error{fmt.Errorf("failed to remove feed: %w", err)}
+
+		if _, sendErr := b.api.Request(tgbotapi.NewCallback(
 			callback.ID,
 			"❌ Failed to remove feed.",
-		))
-		return errors.Join(
-			fmt.Errorf("failed to remove feed: %w", err),
-			fmt.Errorf("failed to send request: %w", sendErr),
-		)
+		)); sendErr != nil {
+			errs = append(errs, fmt.Errorf("failed to send request: %w", sendErr))
+		}
+
+		return errors.Join(errs...)
 	}
 
-	_, err = b.api.Request(tgbotapi.NewCallback(callback.ID, "✅ Feed is removed."))
-	if err != nil {
+	if _, err := b.api.Request(tgbotapi.NewCallback(
+		callback.ID,
+		"✅ Feed is removed.",
+	)); err != nil {
 		return fmt.Errorf("failed to send request: %w", err)
 	}
 
 	return b.handleListCommand(callback.Message.Chat.ID, callback.From.ID)
 }
 
-func (b *Bot) handleSettingsAutoDigestHourUTCQuery(hourUTCStr string, callback *tgbotapi.CallbackQuery) error {
+func (b *Bot) handleSettingsAutoDigestHourUTCQuery(
+	hourUTCStr string,
+	callback *tgbotapi.CallbackQuery,
+) error {
 	hourUTC, err := strconv.ParseInt(hourUTCStr, 10, 64)
 	if err != nil {
-		_, sendErr := b.api.Request(tgbotapi.NewCallback(
+		errs := []error{fmt.Errorf("failed to parse hourUTC: %w", err)}
+
+		if _, sendErr := b.api.Request(tgbotapi.NewCallback(
 			callback.ID,
 			"❌ Failed to update settings.",
-		))
-		return errors.Join(
-			fmt.Errorf("failed to parse hourUTC: %w", err),
-			fmt.Errorf("failed to send request: %w", sendErr),
-		)
+		)); sendErr != nil {
+			errs = append(errs, fmt.Errorf("failed to send request: %w", sendErr))
+		}
+
+		return errors.Join(errs...)
 	}
 
-	if err = b.db.UpsertUserSettings(&model.UserSettings{
+	if err := b.db.UpsertUserSettings(&model.UserSettings{
 		UserID:            callback.From.ID,
 		AutoDigestHourUTC: hourUTC,
 	}); err != nil {
-		_, sendErr := b.api.Request(tgbotapi.NewCallback(
+		errs := []error{fmt.Errorf("failed to upsert user settings: %w", err)}
+
+		if _, sendErr := b.api.Request(tgbotapi.NewCallback(
 			callback.ID,
 			"❌ Failed to update settings.",
-		))
-		return errors.Join(
-			fmt.Errorf("failed to upsert user settings: %w", err),
-			fmt.Errorf("failed to send request: %w", sendErr),
-		)
+		)); sendErr != nil {
+			errs = append(errs, fmt.Errorf("failed to send request: %w", sendErr))
+		}
+
+		return errors.Join(errs...)
 	}
 
-	_, err = b.api.Request(tgbotapi.NewCallback(callback.ID, "✅ Settings are updated."))
-	if err != nil {
+	if _, err := b.api.Request(tgbotapi.NewCallback(
+		callback.ID,
+		"✅ Settings are updated.",
+	)); err != nil {
 		return fmt.Errorf("failed to send request: %w", err)
 	}
 
@@ -379,14 +423,20 @@ func (b *Bot) sendMessageWithKeyboard(
 	msg.DisableWebPagePreview = true
 	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(keyboard...)
 
-	_, err := b.api.Send(msg)
-	return fmt.Errorf("failed to send message: %w", err)
+	if _, err := b.api.Send(msg); err != nil {
+		return fmt.Errorf("failed to send message: %w", err)
+	}
+
+	return nil
 }
 
 func (b *Bot) sendChatAction(chatID int64, action string) error {
 	config := tgbotapi.NewChatAction(chatID, action)
-	_, err := b.api.Request(config)
-	return fmt.Errorf("failed to send request: %w", err)
+	if _, err := b.api.Request(config); err != nil {
+		return fmt.Errorf("failed to send request: %w", err)
+	}
+
+	return nil
 }
 
 func (b *Bot) withSpinner(chatID int64, callback func() error) error {

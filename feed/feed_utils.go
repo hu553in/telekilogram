@@ -105,8 +105,7 @@ func FormatPostsAsMessages(posts []model.Post) []string {
 }
 
 func validateFeed(feedURL string) (*model.Feed, error) {
-	_, err := url.Parse(feedURL)
-	if err != nil {
+	if _, err := url.Parse(feedURL); err != nil {
 		return nil, fmt.Errorf("failed to parse URL: %w", err)
 	}
 

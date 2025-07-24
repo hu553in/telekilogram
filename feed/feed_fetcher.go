@@ -21,7 +21,9 @@ func NewFeedFetcher(db *database.Database) *FeedFetcher {
 	}
 }
 
-func (ff *FeedFetcher) FetchHourFeeds(hourUTC int64) (map[int64][]model.Post, error) {
+func (ff *FeedFetcher) FetchHourFeeds(
+	hourUTC int64,
+) (map[int64][]model.Post, error) {
 	feeds, err := ff.db.GetHourFeeds(hourUTC)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get hour feeds: %w", err)
@@ -30,7 +32,9 @@ func (ff *FeedFetcher) FetchHourFeeds(hourUTC int64) (map[int64][]model.Post, er
 	return ff.fetchFeeds(feeds)
 }
 
-func (ff *FeedFetcher) FetchUserFeeds(userID int64) (map[int64][]model.Post, error) {
+func (ff *FeedFetcher) FetchUserFeeds(
+	userID int64,
+) (map[int64][]model.Post, error) {
 	feeds, err := ff.db.GetUserFeeds(userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user feeds: %w", err)
@@ -39,7 +43,9 @@ func (ff *FeedFetcher) FetchUserFeeds(userID int64) (map[int64][]model.Post, err
 	return ff.fetchFeeds(feeds)
 }
 
-func (ff *FeedFetcher) fetchFeeds(feeds []model.UserFeed) (map[int64][]model.Post, error) {
+func (ff *FeedFetcher) fetchFeeds(
+	feeds []model.UserFeed,
+) (map[int64][]model.Post, error) {
 	var writeWg sync.WaitGroup
 
 	concurrency := min(fetchFeedsMaxConcurrency, len(feeds))
