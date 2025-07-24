@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	"telekilogram/database"
-	"telekilogram/model"
+	"telekilogram/models"
 )
 
 type FeedFetcher struct {
@@ -23,7 +23,7 @@ func NewFeedFetcher(db *database.Database) *FeedFetcher {
 
 func (ff *FeedFetcher) FetchHourFeeds(
 	hourUTC int64,
-) (map[int64][]model.Post, error) {
+) (map[int64][]models.Post, error) {
 	feeds, err := ff.db.GetHourFeeds(hourUTC)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get hour feeds: %w", err)
@@ -34,7 +34,7 @@ func (ff *FeedFetcher) FetchHourFeeds(
 
 func (ff *FeedFetcher) FetchUserFeeds(
 	userID int64,
-) (map[int64][]model.Post, error) {
+) (map[int64][]models.Post, error) {
 	feeds, err := ff.db.GetUserFeeds(userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user feeds: %w", err)
@@ -44,14 +44,14 @@ func (ff *FeedFetcher) FetchUserFeeds(
 }
 
 func (ff *FeedFetcher) fetchFeeds(
-	feeds []model.UserFeed,
-) (map[int64][]model.Post, error) {
+	feeds []models.UserFeed,
+) (map[int64][]models.Post, error) {
 	var writeWg sync.WaitGroup
 
 	concurrency := min(fetchFeedsMaxConcurrency, len(feeds))
 	semCh := make(chan struct{}, concurrency)
 
-	userPostCh := make(chan model.UserPosts, concurrency)
+	userPostCh := make(chan models.UserPosts, concurrency)
 	errCh := make(chan error, concurrency)
 
 	for _, f := range feeds {
@@ -59,10 +59,10 @@ func (ff *FeedFetcher) fetchFeeds(
 		semCh <- struct{}{}
 
 		go func(
-			f *model.UserFeed,
+			f *models.UserFeed,
 			writeWg *sync.WaitGroup,
 			semCh chan struct{},
-			userPostCh chan model.UserPosts,
+			userPostCh chan models.UserPosts,
 			errCh chan error,
 			ff *FeedFetcher,
 		) {
@@ -72,7 +72,7 @@ func (ff *FeedFetcher) fetchFeeds(
 			if err != nil {
 				errCh <- fmt.Errorf("failed to parse feed: %w", err)
 			} else {
-				userPostCh <- model.UserPosts{UserID: f.UserID, Posts: posts}
+				userPostCh <- models.UserPosts{UserID: f.UserID, Posts: posts}
 			}
 
 			<-semCh
@@ -82,7 +82,7 @@ func (ff *FeedFetcher) fetchFeeds(
 	go func(
 		writeWg *sync.WaitGroup,
 		semCh chan struct{},
-		userPostCh chan model.UserPosts,
+		userPostCh chan models.UserPosts,
 		errCh chan error,
 	) {
 		writeWg.Wait()
@@ -92,7 +92,7 @@ func (ff *FeedFetcher) fetchFeeds(
 		close(errCh)
 	}(&writeWg, semCh, userPostCh, errCh)
 
-	userPostsMap := make(map[int64][]model.Post)
+	userPostsMap := make(map[int64][]models.Post)
 	var errs []error
 
 	for userPosts := range userPostCh {

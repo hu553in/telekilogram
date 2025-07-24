@@ -1,4 +1,4 @@
-package model
+package models
 
 type Feed struct {
 	URL   string

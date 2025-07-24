@@ -9,7 +9,7 @@ import (
 	"mvdan.cc/xurls/v2"
 
 	"telekilogram/markdown"
-	"telekilogram/model"
+	"telekilogram/models"
 )
 
 type feedGroupKey struct {
@@ -17,14 +17,14 @@ type feedGroupKey struct {
 	FeedURL   string
 }
 
-func FindValidFeeds(text string) ([]model.Feed, error) {
+func FindValidFeeds(text string) ([]models.Feed, error) {
 	re, err := xurls.StrictMatchingScheme("https://")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create regexp: %w", err)
 	}
 
 	urls := re.FindAllString(text, -1)
-	feeds := make([]model.Feed, 0, len(urls))
+	feeds := make([]models.Feed, 0, len(urls))
 
 	for _, u := range urls {
 		feed, err := validateFeed(u)
@@ -38,14 +38,14 @@ func FindValidFeeds(text string) ([]model.Feed, error) {
 	return feeds, nil
 }
 
-func FormatPostsAsMessages(posts []model.Post) []string {
+func FormatPostsAsMessages(posts []models.Post) []string {
 	var messages []string
 	var currentMessage strings.Builder
 
 	currentMessage.WriteString("📰 *New posts*\n\n")
 	headerLength := currentMessage.Len()
 
-	feedGroups := make(map[feedGroupKey][]model.Post)
+	feedGroups := make(map[feedGroupKey][]models.Post)
 
 	for _, post := range posts {
 		feedTitle := post.FeedTitle
@@ -104,14 +104,14 @@ func FormatPostsAsMessages(posts []model.Post) []string {
 	return messages
 }
 
-func validateFeed(feedURL string) (*model.Feed, error) {
+func validateFeed(feedURL string) (*models.Feed, error) {
 	if _, err := url.Parse(feedURL); err != nil {
 		return nil, fmt.Errorf("failed to parse URL: %w", err)
 	}
 
 	parsed, err := libParser.ParseURL(feedURL)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse feed by URL: %w", err)
+		return nil, fmt.Errorf("failed to parse feed by URL %q: %w", feedURL, err)
 	}
 
 	title := parsed.Title
@@ -121,7 +121,7 @@ func validateFeed(feedURL string) (*model.Feed, error) {
 		title = feedURL
 	}
 
-	return &model.Feed{
+	return &models.Feed{
 		URL:   feedURL,
 		Title: title,
 	}, nil

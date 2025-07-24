@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"telekilogram/database"
-	"telekilogram/model"
+	"telekilogram/models"
 )
 
 type FeedParser struct {
@@ -18,10 +18,10 @@ func NewFeedParser(db *database.Database) *FeedParser {
 	}
 }
 
-func (fp *FeedParser) ParseFeed(feed *model.UserFeed) ([]model.Post, error) {
+func (fp *FeedParser) ParseFeed(feed *models.UserFeed) ([]models.Post, error) {
 	parsed, err := libParser.ParseURL(feed.URL)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse feed by URL: %w", err)
+		return nil, fmt.Errorf("failed to parse feed by URL %q: %w", feed.URL, err)
 	}
 
 	if parsed.Title != feed.Title {
@@ -30,7 +30,7 @@ func (fp *FeedParser) ParseFeed(feed *model.UserFeed) ([]model.Post, error) {
 		}
 	}
 
-	var newPosts []model.Post
+	var newPosts []models.Post
 	now := time.Now().Round(time.Hour)
 	cutoffTime := now.Add(-24*time.Hour - parseFeedGracePeriod)
 
@@ -44,7 +44,7 @@ func (fp *FeedParser) ParseFeed(feed *model.UserFeed) ([]model.Post, error) {
 		}
 
 		if publishedTime.After(cutoffTime) {
-			post := model.Post{
+			post := models.Post{
 				Title:     item.Title,
 				URL:       item.Link,
 				FeedTitle: parsed.Title,
