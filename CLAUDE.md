@@ -34,7 +34,7 @@ The architecture follows a clear separation of concerns:
 - **feed/**: Feed processing system with fetcher, parser, and URL validation utilities
 - **scheduler/**: Cron-based scheduler that automatically sends digests daily
   (default - 00:00 UTC)
-- **model/**: Data structures for `Feed`, `UserFeed`, `Post` and `UserSettings` entities
+- **models/**: Data structures for `Feed`, `UserFeed`, `Post` and `UserSettings` entities
 - **markdown/**: Markdown utilities
 
 ### Key Patterns
