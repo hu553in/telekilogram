@@ -1,6 +1,7 @@
 package feed
 
 import (
+	"fmt"
 	"time"
 
 	"telekilogram/database"
@@ -20,12 +21,12 @@ func NewFeedParser(db *database.Database) *FeedParser {
 func (fp *FeedParser) ParseFeed(feed *model.UserFeed) ([]model.Post, error) {
 	parsed, err := libParser.ParseURL(feed.URL)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse feed by URL: %w", err)
 	}
 
 	if parsed.Title != feed.Title {
 		if err := fp.db.UpdateFeedTitle(feed.ID, parsed.Title); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to update feed title: %w", err)
 		}
 	}
 
