@@ -42,15 +42,15 @@ func main() {
 	db, err := database.New(dbPath)
 	if err != nil {
 		slog.Error("Failed to initialize db",
-			slog.String("dbPath", dbPath),
-			slog.Any("err", err))
+			slog.Any("err", err),
+			slog.String("dbPath", dbPath))
 		return
 	}
 	defer func() {
 		if err := db.Close(); err != nil {
 			slog.Error("Failed to close db",
-				slog.String("dbPath", dbPath),
-				slog.Any("err", err))
+				slog.Any("err", err),
+				slog.String("dbPath", dbPath))
 		}
 	}()
 	slog.Info("DB is initialized")

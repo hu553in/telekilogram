@@ -57,8 +57,8 @@ func (b *Bot) Start() {
 			}
 			if err := b.handleMessage(update.Message); err != nil {
 				slog.Error("Failed to handle message",
-					slog.Any("update", update),
-					slog.Any("err", err))
+					slog.Any("err", err),
+					slog.Any("update", update))
 			}
 		case update.CallbackQuery != nil:
 			if !b.userAllowed(update.CallbackQuery.From.ID) {
@@ -66,8 +66,8 @@ func (b *Bot) Start() {
 			}
 			if err := b.handleCallbackQuery(update.CallbackQuery); err != nil {
 				slog.Error("Failed to handle callback query",
-					slog.Any("update", update),
-					slog.Any("err", err))
+					slog.Any("err", err),
+					slog.Any("update", update))
 			}
 		}
 	}

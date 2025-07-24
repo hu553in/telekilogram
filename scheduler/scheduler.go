@@ -45,18 +45,18 @@ func (s *Scheduler) checkHourFeeds() {
 	userPosts, err := s.fetcher.FetchHourFeeds(hourUTC)
 	if err != nil {
 		slog.Error("Failed to fetch all feeds",
-			slog.Int64("hourUTC", hourUTC),
-			slog.Any("err", err))
+			slog.Any("err", err),
+			slog.Int64("hourUTC", hourUTC))
 		return
 	}
 
 	for userID, posts := range userPosts {
 		if err := s.bot.SendNewPosts(userID, posts); err != nil {
 			slog.Error("Failed to send user posts",
+				slog.Any("err", err),
 				slog.Int64("hourUTC", hourUTC),
 				slog.Int64("userID", userID),
-				slog.Any("posts", posts),
-				slog.Any("err", err))
+				slog.Any("posts", posts))
 		}
 	}
 }

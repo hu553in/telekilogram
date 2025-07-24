@@ -99,8 +99,8 @@ func (d *Database) GetUserFeeds(userID int64) ([]model.UserFeed, error) {
 	defer func() {
 		if err := rows.Close(); err != nil {
 			slog.Error("Failed to close rows",
-				slog.Int64("userID", userID),
-				slog.Any("err", err))
+				slog.Any("err", err),
+				slog.Int64("userID", userID))
 		}
 	}()
 
@@ -143,8 +143,8 @@ func (d *Database) GetHourFeeds(hourUTC int64) ([]model.UserFeed, error) {
 	defer func() {
 		if err := rows.Close(); err != nil {
 			slog.Error("Failed to close rows",
-				slog.Int64("hourUTC", hourUTC),
-				slog.Any("err", err))
+				slog.Any("err", err),
+				slog.Int64("hourUTC", hourUTC))
 		}
 	}()
 
@@ -175,8 +175,8 @@ func (d *Database) GetUserSettingsWithDefault(
 	defer func() {
 		if err := rows.Close(); err != nil {
 			slog.Error("Failed to close rows",
-				slog.Int64("userID", userID),
-				slog.Any("err", err))
+				slog.Any("err", err),
+				slog.Int64("userID", userID))
 		}
 	}()
 
