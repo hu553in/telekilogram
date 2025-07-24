@@ -24,9 +24,10 @@ func (fp *FeedParser) ParseFeed(feed *models.UserFeed) ([]models.Post, error) {
 		return nil, fmt.Errorf("failed to parse feed by URL %q: %w", feed.URL, err)
 	}
 
+	var updateTitleErr error
 	if parsed.Title != feed.Title {
 		if err := fp.db.UpdateFeedTitle(feed.ID, parsed.Title); err != nil {
-			return nil, fmt.Errorf("failed to update feed title: %w", err)
+			updateTitleErr = fmt.Errorf("failed to update feed title: %w", err)
 		}
 	}
 
@@ -54,5 +55,5 @@ func (fp *FeedParser) ParseFeed(feed *models.UserFeed) ([]models.Post, error) {
 		}
 	}
 
-	return newPosts, nil
+	return newPosts, updateTitleErr
 }

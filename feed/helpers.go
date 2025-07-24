@@ -1,6 +1,7 @@
 package feed
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/url"
@@ -25,17 +26,18 @@ func FindValidFeeds(text string) ([]models.Feed, error) {
 
 	urls := re.FindAllString(text, -1)
 	feeds := make([]models.Feed, 0, len(urls))
+	var errs []error
 
 	for _, u := range urls {
 		feed, err := validateFeed(u)
 		if err != nil {
-			return nil, fmt.Errorf("failed to validate feed: %w", err)
+			errs = append(errs, fmt.Errorf("failed to validate feed: %w", err))
 		}
 
 		feeds = append(feeds, *feed)
 	}
 
-	return feeds, nil
+	return feeds, errors.Join(errs...)
 }
 
 func FormatPostsAsMessages(posts []models.Post) []string {
@@ -52,6 +54,7 @@ func FormatPostsAsMessages(posts []models.Post) []string {
 		if feedTitle == "" {
 			slog.Warn("Empty feed title",
 				slog.Any("post", post))
+
 			feedTitle = post.FeedURL
 		}
 
@@ -126,6 +129,7 @@ func validateFeed(feedURL string) (*models.Feed, error) {
 	if title == "" {
 		slog.Warn("Empty feed title",
 			slog.Any("feedURL", feedURL))
+
 		title = feedURL
 	}
 

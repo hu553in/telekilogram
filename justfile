@@ -9,16 +9,18 @@ all: check run
 ensure-build-dir:
     mkdir -p {{build_dir}}
 
-check: install-deps lint fmt test build
+pre-commit: install-deps lint test build
+
+check: install-deps fmt lint test build
 
 install-deps:
     go mod download
 
-lint:
-    golangci-lint run
-
 fmt:
     golangci-lint fmt
+
+lint:
+    golangci-lint run
 
 test: ensure-build-dir
     go test -v ./... \

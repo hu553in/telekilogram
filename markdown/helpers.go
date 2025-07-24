@@ -14,5 +14,6 @@ func EscapeV2(input string) string {
 	for _, char := range markdownSpecialChars {
 		escaped = strings.ReplaceAll(escaped, char, "\\"+char)
 	}
+
 	return escaped
 }

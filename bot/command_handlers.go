@@ -1,26 +1,43 @@
 package bot
 
 import (
+	"errors"
 	"fmt"
 	"strings"
-	"telekilogram/markdown"
 	"time"
+
+	"telekilogram/markdown"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 func (b *Bot) handleListCommand(chatID int64, userID int64) error {
 	feeds, err := b.db.GetUserFeeds(userID)
-	if err != nil {
-		return fmt.Errorf("failed to get user feeds: %w", err)
-	}
 
 	if len(feeds) == 0 {
-		return b.sendMessageWithKeyboard(
+		var errs []error
+		if err != nil {
+			errs = append(errs, fmt.Errorf("failed to get user feeds: %w", err))
+		}
+
+		sendErr := b.sendMessageWithKeyboard(
 			chatID,
 			"✖️ Feed list is empty or there is a bug\\.",
 			returnKeyboard,
 		)
+		if sendErr != nil {
+			errs = append(
+				errs,
+				fmt.Errorf("failed to send message with keyboard: %w", sendErr),
+			)
+		}
+
+		return errors.Join(errs...)
+	}
+
+	var errs []error
+	if err != nil {
+		errs = append(errs, fmt.Errorf("failed to get user feeds: %w", err))
 	}
 
 	var message strings.Builder
@@ -54,10 +71,13 @@ func (b *Bot) handleListCommand(chatID int64, userID int64) error {
 		message.String(),
 		keyboard,
 	); err != nil {
-		return fmt.Errorf("failed to send message with keyboard: %w", err)
+		errs = append(
+			errs,
+			fmt.Errorf("failed to send message with keyboard: %w", err),
+		)
 	}
 
-	return nil
+	return errors.Join(errs...)
 }
 
 func (b *Bot) handleMenuCommand(chatID int64) error {
@@ -66,33 +86,62 @@ func (b *Bot) handleMenuCommand(chatID int64) error {
 
 func (b *Bot) handleDigestCommand(chatID int64, userID int64) error {
 	userPosts, err := b.fetcher.FetchUserFeeds(userID)
-	if err != nil {
-		return fmt.Errorf("failed to fetch user feeds: %w", err)
-	}
 
 	if len(userPosts) == 0 {
-		if err := b.sendMessageWithKeyboard(
+		var errs []error
+		if err != nil {
+			errs = append(errs, fmt.Errorf("failed to fetch user feeds: %w", err))
+		}
+
+		sendErr := b.sendMessageWithKeyboard(
 			chatID,
 			"✖️ Feed list is empty or there is a bug\\.",
 			returnKeyboard,
-		); err != nil {
-			return fmt.Errorf("failed to send message with keyboard: %w", err)
+		)
+		if sendErr != nil {
+			errs = append(
+				errs,
+				fmt.Errorf("failed to send message with keyboard: %w", sendErr),
+			)
 		}
+
+		return errors.Join(errs...)
+	}
+
+	var errs []error
+	if err != nil {
+		errs = append(errs, fmt.Errorf("failed to fetch user feeds: %w", err))
 	}
 
 	for _, posts := range userPosts {
 		if err := b.SendNewPosts(chatID, posts); err != nil {
-			return fmt.Errorf("failed to send new posts: %w", err)
+			errs = append(errs, fmt.Errorf("failed to send new posts: %w", err))
 		}
 	}
 
-	return nil
+	return errors.Join(errs...)
 }
 
 func (b *Bot) handleSettingsCommand(chatID int64, userID int64) error {
 	settings, err := b.db.GetUserSettingsWithDefault(userID)
 	if err != nil {
-		return fmt.Errorf("failed to get user settings with default: %w", err)
+		errs := []error{
+			fmt.Errorf("failed to get user settings with default: %w", err),
+		}
+
+		sendErr := b.sendMessageWithKeyboard(
+			chatID,
+			"❌ Failed\\.",
+			returnKeyboard,
+		)
+		if sendErr != nil {
+			errs = append(
+				errs,
+				fmt.Errorf("failed to send message with keyboard: %w", sendErr),
+			)
+		}
+
+		return errors.Join(errs...)
 	}
 
 	currentUTC := time.Now().UTC().Format("15:04")

@@ -28,7 +28,7 @@ The architecture follows a clear separation of concerns:
   and sets up graceful shutdown
 - **bot/**: Telegram bot interface handling user commands
   (`/start`, `/menu`, `/list`, `/digest`, `/filter`, `/settings`),
-  callback queries, and message processing
+  callback queries with helper functions for error handling, and message processing
 - **database/**: SQLite database layer with embedded migrations,
   managing feed storage, user associations and settings
 - **feed/**: Feed processing system with fetcher, parser, and URL validation utilities
@@ -42,11 +42,12 @@ The architecture follows a clear separation of concerns:
 - Uses structured logging with `log/slog` throughout with contextual information
 - Database migrations are embedded in the binary using `//go:embed`
 - Error handling uses `fmt.Errorf` for error context wrapping
-  and `errors.Join()` for collecting multiple errors
+  and `errors.Join()` for collecting multiple errors from concurrent operations
 - User authorization is handled via `ALLOWED_USERS` environment variable
   (comma-separated `int64` list)
 - Feed URLs are automatically detected from user messages and validated
-- Bot responses use inline keyboards for navigation
+- Bot responses use inline keyboards for navigation with improved separation
+  between command handlers, callback query handlers, and helper functions
 
 ### Environment Configuration
 

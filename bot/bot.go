@@ -1,7 +1,7 @@
 package bot
 
 import (
-	"fmt"
+	"errors"
 	"log/slog"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -26,7 +26,7 @@ func New(
 ) (*Bot, error) {
 	api, err := tgbotapi.NewBotAPI(token)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create bot API: %w", err)
+		return nil, err
 	}
 
 	return &Bot{
@@ -39,7 +39,7 @@ func New(
 
 func (b *Bot) Start() {
 	updateConfig := tgbotapi.NewUpdate(0)
-	updateConfig.Timeout = 60
+	updateConfig.Timeout = updateTimeout
 
 	updates := b.api.GetUpdatesChan(updateConfig)
 
@@ -47,6 +47,9 @@ func (b *Bot) Start() {
 		switch {
 		case update.Message != nil:
 			if !b.userAllowed(update.Message.From.ID) {
+				slog.Debug("User is not allowed",
+					slog.Int64("userID", update.Message.From.ID))
+
 				return
 			}
 			if err := b.handleMessage(update.Message); err != nil {
@@ -56,6 +59,9 @@ func (b *Bot) Start() {
 			}
 		case update.CallbackQuery != nil:
 			if !b.userAllowed(update.CallbackQuery.From.ID) {
+				slog.Debug("User is not allowed",
+					slog.Int64("userID", update.CallbackQuery.From.ID))
+
 				return
 			}
 			if err := b.handleCallbackQuery(update.CallbackQuery); err != nil {
@@ -73,6 +79,7 @@ func (b *Bot) SendNewPosts(chatID int64, posts []models.Post) error {
 	}
 
 	messages := feed.FormatPostsAsMessages(posts)
+	var errs []error
 
 	for _, message := range messages {
 		if err := b.sendMessageWithKeyboard(
@@ -80,9 +87,9 @@ func (b *Bot) SendNewPosts(chatID int64, posts []models.Post) error {
 			message,
 			returnKeyboard,
 		); err != nil {
-			return fmt.Errorf("failed to send message with keyboard: %w", err)
+			errs = append(errs, err)
 		}
 	}
 
-	return nil
+	return errors.Join(errs...)
 }

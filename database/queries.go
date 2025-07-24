@@ -3,6 +3,7 @@ package database
 import (
 	"fmt"
 	"log/slog"
+
 	"telekilogram/models"
 )
 
@@ -12,33 +13,31 @@ func (d *Database) AddFeed(
 	feedTitle string,
 ) error {
 	query := "insert or ignore into feeds (user_id, url, title) values (?, ?, ?)"
-	if _, err := d.db.Exec(query, userID, feedURL, feedTitle); err != nil {
-		return fmt.Errorf("failed to execute query: %w", err)
-	}
 
-	return nil
+	_, err := d.db.Exec(query, userID, feedURL, feedTitle)
+
+	return err
 }
 
 func (d *Database) UpdateFeedTitle(feedID int64, feedTitle string) error {
 	query := "update feeds set title = ? where id = ?"
-	if _, err := d.db.Exec(query, feedTitle, feedID); err != nil {
-		return fmt.Errorf("failed to execute query: %w", err)
-	}
 
-	return nil
+	_, err := d.db.Exec(query, feedTitle, feedID)
+
+	return err
 }
 
 func (d *Database) RemoveFeed(feedID int64) error {
 	query := "delete from feeds where id = ?"
-	if _, err := d.db.Exec(query, feedID); err != nil {
-		return fmt.Errorf("failed to execute query: %w", err)
-	}
 
-	return nil
+	_, err := d.db.Exec(query, feedID)
+
+	return err
 }
 
 func (d *Database) GetUserFeeds(userID int64) ([]models.UserFeed, error) {
 	query := "select id, url, title from feeds where user_id = ?"
+
 	rows, err := d.db.Query(query, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute query: %w", err)
@@ -148,13 +147,11 @@ func (d *Database) UpsertUserSettings(userSettings *models.UserSettings) error {
 	on conflict (user_id) do update
 	set auto_digest_hour_utc = excluded.auto_digest_hour_utc`
 
-	if _, err := d.db.Exec(
+	_, err := d.db.Exec(
 		query,
 		userSettings.UserID,
 		userSettings.AutoDigestHourUTC,
-	); err != nil {
-		return fmt.Errorf("failed to execute query: %w", err)
-	}
+	)
 
-	return nil
+	return err
 }

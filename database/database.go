@@ -3,6 +3,7 @@ package database
 import (
 	"database/sql"
 	"embed"
+	"errors"
 	"fmt"
 
 	"github.com/golang-migrate/migrate/v4"
@@ -48,13 +49,14 @@ func New(dbPath string) (*Database, error) {
 	}
 
 	if err := m.Up(); err != nil {
-		if err != migrate.ErrNoChange {
+		if !errors.Is(err, migrate.ErrNoChange) {
 			return nil, fmt.Errorf("failed to apply migrations: %w", err)
 		}
 		slog.Info("No migrations to apply")
 	}
 
 	slog.Info("DB is migrated")
+
 	return &Database{db: dbFile}, nil
 }
 

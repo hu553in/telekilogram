@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 
@@ -20,30 +21,76 @@ func (b *Bot) sendMessageWithKeyboard(
 	msg.DisableWebPagePreview = true
 	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(keyboard...)
 
-	if _, err := b.api.Send(msg); err != nil {
-		return fmt.Errorf("failed to send message: %w", err)
-	}
+	_, err := b.api.Send(msg)
 
-	return nil
+	return err
 }
 
 func (b *Bot) sendChatAction(chatID int64, action string) error {
 	config := tgbotapi.NewChatAction(chatID, action)
-	if _, err := b.api.Request(config); err != nil {
-		return fmt.Errorf("failed to send request: %w", err)
-	}
+	_, err := b.api.Request(config)
 
-	return nil
+	return err
 }
 
-func (b *Bot) withSpinner(chatID int64, callback func() error) error {
+func (b *Bot) withSpinner(chatID int64, function func() error) error {
+	var errs []error
+
 	if err := b.sendChatAction(chatID, tgbotapi.ChatTyping); err != nil {
-		return fmt.Errorf("failed to send chat action: %w", err)
+		errs = append(errs, fmt.Errorf("failed to send chat action: %w", err))
 	}
 
-	return callback()
+	err := function()
+	if err != nil {
+		errs = append(errs, fmt.Errorf("failed to call function: %w", err))
+	}
+
+	return errors.Join(errs...)
 }
 
 func (b *Bot) userAllowed(userID int64) bool {
 	return len(b.allowedUsers) == 0 || slices.Contains(b.allowedUsers, userID)
+}
+
+func (b *Bot) withEmptyCallbackAnswer(
+	callback *tgbotapi.CallbackQuery,
+	function func() error,
+) error {
+	var errs []error
+
+	if _, err := b.api.Request(tgbotapi.NewCallback(
+		callback.ID,
+		"",
+	)); err != nil {
+		errs = append(
+			errs,
+			b.errorCallbackAnswer(
+				callback,
+				fmt.Errorf("failed to send request: %w", err),
+			),
+		)
+	}
+
+	err := b.withSpinner(callback.Message.Chat.ID, func() error {
+		return function()
+	})
+	if err != nil {
+		errs = append(errs, fmt.Errorf("failed to call function: %w", err))
+	}
+
+	return errors.Join(errs...)
+}
+
+func (b *Bot) errorCallbackAnswer(
+	callback *tgbotapi.CallbackQuery,
+	err error,
+) error {
+	if _, sendErr := b.api.Request(tgbotapi.NewCallback(
+		callback.ID,
+		"❌ Failed.",
+	)); sendErr != nil {
+		return errors.Join(err, fmt.Errorf("failed to send request: %w", sendErr))
+	}
+
+	return err
 }

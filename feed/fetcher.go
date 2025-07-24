@@ -71,7 +71,9 @@ func (ff *FeedFetcher) fetchFeeds(
 			posts, err := ff.parser.ParseFeed(f)
 			if err != nil {
 				errCh <- fmt.Errorf("failed to parse feed: %w", err)
-			} else {
+			}
+
+			if len(posts) != 0 {
 				userPostCh <- models.UserPosts{UserID: f.UserID, Posts: posts}
 			}
 
@@ -93,14 +95,14 @@ func (ff *FeedFetcher) fetchFeeds(
 	}(&writeWg, semCh, userPostCh, errCh)
 
 	userPostsMap := make(map[int64][]models.Post)
-	var errs []error
-
 	for userPosts := range userPostCh {
 		userPostsMap[userPosts.UserID] = append(
 			userPostsMap[userPosts.UserID],
 			userPosts.Posts...,
 		)
 	}
+
+	var errs []error
 	for err := range errCh {
 		errs = append(errs, err)
 	}

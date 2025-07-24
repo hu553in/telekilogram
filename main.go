@@ -23,6 +23,7 @@ func main() {
 	if err := godotenv.Load(); err != nil {
 		slog.Error("Failed to load .env file",
 			slog.Any("err", err))
+
 		return
 	}
 	slog.Info(".env file is loaded")
@@ -30,6 +31,7 @@ func main() {
 	token := os.Getenv("TOKEN")
 	if token == "" {
 		slog.Error("TOKEN is required")
+
 		return
 	}
 
@@ -44,6 +46,7 @@ func main() {
 		slog.Error("Failed to initialize db",
 			slog.Any("err", err),
 			slog.String("dbPath", dbPath))
+
 		return
 	}
 	defer func() {
@@ -66,6 +69,7 @@ func main() {
 				"ALLOWED_USERS must be empty or comma-separated int64 list",
 				slog.String("ALLOWED_USERS", allowedUsersRaw),
 			)
+
 			return
 		}
 		allowedUsers = append(allowedUsers, userID)
@@ -76,6 +80,7 @@ func main() {
 	if err != nil {
 		slog.Error("Failed to initialize bot",
 			slog.Any("err", err))
+
 		return
 	}
 	slog.Info("Bot is initialized")
@@ -85,6 +90,7 @@ func main() {
 	if err := scheduler.Start(); err != nil {
 		slog.Error("Failed to start scheduler",
 			slog.Any("err", err))
+
 		return
 	}
 	defer scheduler.Stop()
