@@ -9,8 +9,8 @@ I'm your feed assistant\. I can help you:
 – Follow feeds by sending me URLs
 – Get feed list with /list
 – Unfollow feeds directly from list
-– Receive daily auto\-digest \(now\-24h\) automatically (default - 00:00 UTC)
-– Receive digest \(now\-24h\) with /digest
+– Receive 24h auto\-digest daily automatically \(default \- 00:00 UTC\)
+– Receive 24h digest with /digest
 – Configure user settings with /settings`
 
 const settingsText = `*⚙️ Settings*
