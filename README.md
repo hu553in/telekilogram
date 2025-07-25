@@ -32,13 +32,13 @@ Feed assistant Telegram bot written in Go.
   - decided to use awesome [siftrss](https://siftrss.com/) instead ✨
 - [x] Replace 00:00 UTC with setting per user
 - [x] Add context to errors (`fmt.Errorf`)
-- [X] Respond with at least error to any request from user
-- [X] Respond with partial data if something is loaded correctly
-- [X] Check if adding some debug logs can be useful
+- [x] Respond with at least error to any request from user
+- [x] Respond with partial data if something is loaded correctly
+- [x] Check if adding some debug logs can be useful
   - decided to add when needed
+- [x] Rethink unfollow keyboard (now it's row for each feed)
 - [ ] Check if logs can be enriched with some useful contextual info
 - [ ] Understand if it is needed to implement graceful shutdown, etc.
-- [ ] Rethink unfollow keyboard (now it's row for each feed)
 - [ ] Trim whitespaces in any significant places
 - [ ] Add tests (at least for critical functionality)
 - [ ] Deploy using Docker instead of `systemd` service (optional)

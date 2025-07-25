@@ -3,13 +3,81 @@ package bot
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
 	"telekilogram/markdown"
-
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
+
+func (b *Bot) handleStartCommand(
+	text string,
+	chatID int64,
+	userID int64,
+) error {
+	if feedIDStr, ok := strings.CutPrefix(text, "/start unfollow_"); ok {
+		return b.handleUnfollowDeepLink(feedIDStr, chatID, userID)
+	}
+
+	return b.sendMessageWithKeyboard(chatID, welcomeText, menuKeyboard)
+}
+
+func (b *Bot) handleUnfollowDeepLink(
+	feedIDStr string,
+	chatID int64,
+	userID int64,
+) error {
+	feedID, err := strconv.ParseInt(feedIDStr, 10, 64)
+	if err != nil {
+		errs := []error{
+			fmt.Errorf("failed to parse feedID: %w", err),
+		}
+
+		sendErr := b.sendMessageWithKeyboard(
+			chatID,
+			"❌ Failed\\.",
+			returnKeyboard,
+		)
+		if sendErr != nil {
+			errs = append(
+				errs,
+				fmt.Errorf("failed to send message with keyboard: %w", sendErr),
+			)
+		}
+
+		return errors.Join(errs...)
+	}
+
+	if err := b.db.RemoveFeed(feedID); err != nil {
+		errs := []error{
+			fmt.Errorf("failed to remove feed: %w", err),
+		}
+
+		sendErr := b.sendMessageWithKeyboard(
+			chatID,
+			"❌ Failed\\.",
+			returnKeyboard,
+		)
+		if sendErr != nil {
+			errs = append(
+				errs,
+				fmt.Errorf("failed to send message with keyboard: %w", sendErr),
+			)
+		}
+
+		return errors.Join(errs...)
+	}
+
+	if err := b.sendMessageWithKeyboard(
+		chatID,
+		"✅ Feed is removed\\.",
+		returnKeyboard,
+	); err != nil {
+		return fmt.Errorf("failed to send message with keyboard: %w", err)
+	}
+
+	return b.handleListCommand(chatID, userID)
+}
 
 func (b *Bot) handleListCommand(chatID int64, userID int64) error {
 	feeds, err := b.db.GetUserFeeds(userID)
@@ -43,33 +111,35 @@ func (b *Bot) handleListCommand(chatID int64, userID int64) error {
 	var message strings.Builder
 	message.WriteString(fmt.Sprintf("🔍 *Found %d feeds:*\n\n", len(feeds)))
 
-	keyboard := make(
-		[][]tgbotapi.InlineKeyboardButton,
-		0,
-		len(feeds)+len(returnKeyboard),
-	)
-
-	for i, f := range feeds {
-		message.WriteString(fmt.Sprintf(
-			"%d\\. [%s](%s)\n",
-			i+1,
-			markdown.EscapeV2(f.Title),
-			f.URL,
-		))
-
-		button := tgbotapi.NewInlineKeyboardButtonData(
-			fmt.Sprintf("Unfollow %d", i+1),
-			fmt.Sprintf("unfollow_%d", f.ID),
-		)
-		keyboard = append(keyboard, []tgbotapi.InlineKeyboardButton{button})
+	botInfo, botInfoErr := b.api.GetMe()
+	if botInfoErr != nil {
+		errs = append(errs, fmt.Errorf("failed to get bot info: %w", botInfoErr))
 	}
 
-	keyboard = append(keyboard, returnKeyboard...)
+	for i, f := range feeds {
+		if botInfoErr == nil {
+			message.WriteString(fmt.Sprintf(
+				"%d\\. [%s](%s) \\[[unfollow](https://t\\.me/%s?start=unfollow_%d)\\]\n",
+				i+1,
+				markdown.EscapeV2(f.Title),
+				f.URL,
+				botInfo.UserName,
+				f.ID,
+			))
+		} else {
+			message.WriteString(fmt.Sprintf(
+				"%d\\. [%s](%s)\n",
+				i+1,
+				markdown.EscapeV2(f.Title),
+				f.URL,
+			))
+		}
+	}
 
 	if err := b.sendMessageWithKeyboard(
 		chatID,
 		message.String(),
-		keyboard,
+		returnKeyboard,
 	); err != nil {
 		errs = append(
 			errs,

@@ -31,10 +31,6 @@ func (b *Bot) handleCallbackQuery(callback *tgbotapi.CallbackQuery) error {
 			})
 		}
 
-		if feedIDStr, ok := strings.CutPrefix(callback.Data, "unfollow_"); ok {
-			return b.handleUnfollowQuery(feedIDStr, callback)
-		}
-
 		if hourUTCStr, ok := strings.CutPrefix(
 			callback.Data,
 			"settings_auto_digest_hour_utc_",
@@ -44,35 +40,6 @@ func (b *Bot) handleCallbackQuery(callback *tgbotapi.CallbackQuery) error {
 
 		return nil
 	})
-}
-
-func (b *Bot) handleUnfollowQuery(
-	feedIDStr string,
-	callback *tgbotapi.CallbackQuery,
-) error {
-	feedID, err := strconv.ParseInt(feedIDStr, 10, 64)
-	if err != nil {
-		return b.errorCallbackAnswer(
-			callback,
-			fmt.Errorf("failed to parse feedID: %w", err),
-		)
-	}
-
-	if err := b.db.RemoveFeed(feedID); err != nil {
-		return b.errorCallbackAnswer(
-			callback,
-			fmt.Errorf("failed to remove feed: %w", err),
-		)
-	}
-
-	if _, err := b.api.Request(tgbotapi.NewCallback(
-		callback.ID,
-		"✅ Feed is removed.",
-	)); err != nil {
-		return fmt.Errorf("failed to send request: %w", err)
-	}
-
-	return b.handleListCommand(callback.Message.Chat.ID, callback.From.ID)
 }
 
 func (b *Bot) handleSettingsAutoDigestHourUTCQuery(

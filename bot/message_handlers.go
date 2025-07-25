@@ -14,7 +14,7 @@ func (b *Bot) handleMessage(message *tgbotapi.Message) error {
 	return b.withSpinner(message.Chat.ID, func() error {
 		switch {
 		case strings.HasPrefix(message.Text, "/start"):
-			return b.sendMessageWithKeyboard(message.Chat.ID, welcomeText, menuKeyboard)
+			return b.handleStartCommand(message.Text, message.Chat.ID, message.From.ID)
 		case strings.HasPrefix(message.Text, "/menu"):
 			return b.handleMenuCommand(message.Chat.ID)
 		case strings.HasPrefix(message.Text, "/list"):
@@ -68,11 +68,9 @@ func (b *Bot) handleRandomText(
 	for _, feed := range feeds {
 		if err := b.db.AddFeed(userID, feed.URL, feed.Title); err != nil {
 			errs = append(errs, fmt.Errorf("failed to add feed: %w", err))
-
-			continue
+		} else {
+			added += 1
 		}
-
-		added += 1
 	}
 
 	if added == 0 {

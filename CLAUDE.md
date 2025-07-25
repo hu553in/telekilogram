@@ -26,7 +26,7 @@ The architecture follows a clear separation of concerns:
 - **main.go**: Entry point that initializes all components,
   handles environment variables (`TOKEN`, `DB_PATH`, `ALLOWED_USERS`),
   and sets up graceful shutdown
-- **bot/**: Telegram bot interface handling user commands
+- **bot/**: Telegram bot interface handling user commands with deep link support
   (`/start`, `/menu`, `/list`, `/digest`, `/filter`, `/settings`),
   callback queries with helper functions for error handling, and message processing
 - **database/**: SQLite database layer with embedded migrations,
@@ -48,6 +48,7 @@ The architecture follows a clear separation of concerns:
 - Feed URLs are automatically detected from user messages and validated
 - Bot responses use inline keyboards for navigation with improved separation
   between command handlers, callback query handlers, and helper functions
+- Feed list displays unfollow links using deep links
 
 ### Environment Configuration
 
