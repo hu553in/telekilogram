@@ -15,6 +15,7 @@ type UserFeed struct {
 type Post struct {
 	Title     string
 	URL       string
+	FeedID    int64
 	FeedTitle string
 	FeedURL   string
 }

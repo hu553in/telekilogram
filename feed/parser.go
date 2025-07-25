@@ -48,6 +48,7 @@ func (fp *FeedParser) ParseFeed(feed *models.UserFeed) ([]models.Post, error) {
 			post := models.Post{
 				Title:     item.Title,
 				URL:       item.Link,
+				FeedID:    feed.ID,
 				FeedTitle: parsed.Title,
 				FeedURL:   feed.URL,
 			}

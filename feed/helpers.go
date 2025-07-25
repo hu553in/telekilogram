@@ -1,10 +1,13 @@
 package feed
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"net/url"
+	"slices"
 	"strings"
 
 	"mvdan.cc/xurls/v2"
@@ -14,6 +17,7 @@ import (
 )
 
 type feedGroupKey struct {
+	FeedID    int64
 	FeedTitle string
 	FeedURL   string
 }
@@ -59,13 +63,24 @@ func FormatPostsAsMessages(posts []models.Post) []string {
 		}
 
 		key := feedGroupKey{
+			FeedID:    post.FeedID,
 			FeedTitle: feedTitle,
 			FeedURL:   post.FeedURL,
 		}
 		feedGroups[key] = append(feedGroups[key], post)
 	}
 
-	for key, feedPosts := range feedGroups {
+	feedGroupKeySeq := maps.Keys(feedGroups)
+	feedGroupKeys := slices.SortedFunc(
+		feedGroupKeySeq,
+		func(a, b feedGroupKey) int {
+			return cmp.Compare(a.FeedID, b.FeedID)
+		},
+	)
+
+	for _, key := range feedGroupKeys {
+		feedPosts := feedGroups[key]
+
 		feedHeader := fmt.Sprintf(
 			"📌 *[%s](%s)*\n\n",
 			markdown.EscapeV2(key.FeedTitle),
