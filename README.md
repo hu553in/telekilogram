@@ -40,6 +40,7 @@ Feed assistant Telegram bot written in Go.
 - [ ] Check if logs can be enriched with some useful contextual info
 - [ ] Understand if it is needed to implement graceful shutdown, etc.
 - [ ] Trim whitespaces in any significant places
+- [ ] Fully protect Telegram max message length in feed list and digest
 - [ ] Add tests (at least for critical functionality)
 - [ ] Deploy using Docker instead of `systemd` service (optional)
 - [ ] Migrate to https://github.com/go-telegram/bot (optional)
