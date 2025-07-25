@@ -11,40 +11,39 @@ import (
 )
 
 func (b *Bot) handleCallbackQuery(callback *tgbotapi.CallbackQuery) error {
-	switch callback.Data {
-	case "menu":
-		return b.withEmptyCallbackAnswer(callback, func() error {
-			return b.handleMenuCommand(callback.Message.Chat.ID)
-		})
-	case "menu_list":
-		return b.withEmptyCallbackAnswer(callback, func() error {
-			return b.handleListCommand(callback.Message.Chat.ID, callback.From.ID)
-		})
-	case "menu_digest":
-		return b.withEmptyCallbackAnswer(callback, func() error {
-			return b.handleDigestCommand(callback.Message.Chat.ID, callback.From.ID)
-		})
-	case "menu_settings":
-		return b.withEmptyCallbackAnswer(callback, func() error {
-			return b.handleSettingsCommand(callback.Message.Chat.ID, callback.From.ID)
-		})
-	}
+	return b.withSpinner(callback.Message.Chat.ID, func() error {
+		switch callback.Data {
+		case "menu":
+			return b.withEmptyCallbackAnswer(callback, func() error {
+				return b.handleMenuCommand(callback.Message.Chat.ID)
+			})
+		case "menu_list":
+			return b.withEmptyCallbackAnswer(callback, func() error {
+				return b.handleListCommand(callback.Message.Chat.ID, callback.From.ID)
+			})
+		case "menu_digest":
+			return b.withEmptyCallbackAnswer(callback, func() error {
+				return b.handleDigestCommand(callback.Message.Chat.ID, callback.From.ID)
+			})
+		case "menu_settings":
+			return b.withEmptyCallbackAnswer(callback, func() error {
+				return b.handleSettingsCommand(callback.Message.Chat.ID, callback.From.ID)
+			})
+		}
 
-	if feedIDStr, ok := strings.CutPrefix(callback.Data, "unfollow_"); ok {
-		return b.withSpinner(callback.Message.Chat.ID, func() error {
+		if feedIDStr, ok := strings.CutPrefix(callback.Data, "unfollow_"); ok {
 			return b.handleUnfollowQuery(feedIDStr, callback)
-		})
-	}
-	if hourUTCStr, ok := strings.CutPrefix(
-		callback.Data,
-		"settings_auto_digest_hour_utc_",
-	); ok {
-		return b.withSpinner(callback.Message.Chat.ID, func() error {
-			return b.handleSettingsAutoDigestHourUTCQuery(hourUTCStr, callback)
-		})
-	}
+		}
 
-	return nil
+		if hourUTCStr, ok := strings.CutPrefix(
+			callback.Data,
+			"settings_auto_digest_hour_utc_",
+		); ok {
+			return b.handleSettingsAutoDigestHourUTCQuery(hourUTCStr, callback)
+		}
+
+		return nil
+	})
 }
 
 func (b *Bot) handleUnfollowQuery(

@@ -16,7 +16,7 @@ func (b *Bot) sendMessageWithKeyboard(
 	msg := tgbotapi.NewMessage(chatID, text)
 
 	// https://core.telegram.org/bots/api#markdownv2-style
-	msg.ParseMode = "MarkdownV2"
+	msg.ParseMode = tgbotapi.ModeMarkdownV2
 
 	msg.DisableWebPagePreview = true
 	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(keyboard...)
@@ -71,9 +71,7 @@ func (b *Bot) withEmptyCallbackAnswer(
 		)
 	}
 
-	err := b.withSpinner(callback.Message.Chat.ID, func() error {
-		return function()
-	})
+	err := function()
 	if err != nil {
 		errs = append(errs, fmt.Errorf("failed to call function: %w", err))
 	}
