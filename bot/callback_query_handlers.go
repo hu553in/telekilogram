@@ -64,7 +64,7 @@ func (b *Bot) handleSettingsAutoDigestHourUTCQuery(
 		)
 	}
 
-	if _, err := b.api.Request(tgbotapi.NewCallback(
+	if _, err := b.rateLimiter.Request(tgbotapi.NewCallback(
 		callback.ID,
 		"✅ Settings are updated.",
 	)); err != nil {

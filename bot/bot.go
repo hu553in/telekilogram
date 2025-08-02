@@ -9,10 +9,12 @@ import (
 	"telekilogram/database"
 	"telekilogram/feed"
 	"telekilogram/models"
+	"telekilogram/ratelimiter"
 )
 
 type Bot struct {
 	api          *tgbotapi.BotAPI
+	rateLimiter  *ratelimiter.RateLimiter
 	db           *database.Database
 	fetcher      *feed.FeedFetcher
 	allowedUsers []int64
@@ -29,8 +31,11 @@ func New(
 		return nil, err
 	}
 
+	rateLimiter := ratelimiter.New(api)
+
 	return &Bot{
 		api:          api,
+		rateLimiter:  rateLimiter,
 		db:           db,
 		fetcher:      fetcher,
 		allowedUsers: allowedUsers,
@@ -92,4 +97,10 @@ func (b *Bot) SendNewPosts(chatID int64, posts []models.Post) error {
 	}
 
 	return errors.Join(errs...)
+}
+
+func (b *Bot) Stop() {
+	if b.rateLimiter != nil {
+		b.rateLimiter.Stop()
+	}
 }

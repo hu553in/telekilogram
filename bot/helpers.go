@@ -13,22 +13,22 @@ func (b *Bot) sendMessageWithKeyboard(
 	text string,
 	keyboard [][]tgbotapi.InlineKeyboardButton,
 ) error {
-	msg := tgbotapi.NewMessage(chatID, text)
+	message := tgbotapi.NewMessage(chatID, text)
 
 	// https://core.telegram.org/bots/api#markdownv2-style
-	msg.ParseMode = tgbotapi.ModeMarkdownV2
+	message.ParseMode = tgbotapi.ModeMarkdownV2
 
-	msg.DisableWebPagePreview = true
-	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(keyboard...)
+	message.DisableWebPagePreview = true
+	message.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(keyboard...)
 
-	_, err := b.api.Send(msg)
+	_, err := b.rateLimiter.Send(message)
 
 	return err
 }
 
 func (b *Bot) sendChatAction(chatID int64, action string) error {
 	config := tgbotapi.NewChatAction(chatID, action)
-	_, err := b.api.Request(config)
+	_, err := b.rateLimiter.Request(config)
 
 	return err
 }
@@ -58,7 +58,7 @@ func (b *Bot) withEmptyCallbackAnswer(
 ) error {
 	var errs []error
 
-	if _, err := b.api.Request(tgbotapi.NewCallback(
+	if _, err := b.rateLimiter.Request(tgbotapi.NewCallback(
 		callback.ID,
 		"",
 	)); err != nil {
@@ -83,7 +83,7 @@ func (b *Bot) errorCallbackAnswer(
 	callback *tgbotapi.CallbackQuery,
 	err error,
 ) error {
-	if _, sendErr := b.api.Request(tgbotapi.NewCallback(
+	if _, sendErr := b.rateLimiter.Request(tgbotapi.NewCallback(
 		callback.ID,
 		"❌ Failed.",
 	)); sendErr != nil {

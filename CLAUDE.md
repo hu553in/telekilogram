@@ -29,6 +29,8 @@ The architecture follows a clear separation of concerns:
 - **bot/**: Telegram bot interface handling user commands with deep link support
   (`/start`, `/menu`, `/list`, `/digest`, `/filter`, `/settings`),
   callback queries with helper functions for error handling, and message processing
+- **ratelimiter/**: Rate limiting system for Telegram API calls with separate limits
+  for private chats (1s) and group chats (3s), includes graceful shutdown
 - **database/**: SQLite database layer with embedded migrations,
   managing feed storage, user associations and settings
 - **feed/**: Feed processing system with fetcher, parser, and URL validation utilities
@@ -49,6 +51,7 @@ The architecture follows a clear separation of concerns:
 - Bot responses use inline keyboards for navigation with improved separation
   between command handlers, callback query handlers, and helper functions
 - Feed list displays unfollow links using deep links
+- Rate limiting prevents Telegram API limits with queued requests and automatic delays
 
 ### Environment Configuration
 

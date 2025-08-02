@@ -105,4 +105,7 @@ func main() {
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	<-c
 	slog.Info("Exiting...")
+
+	botInst.Stop()
+	slog.Info("Bot is stopped")
 }
