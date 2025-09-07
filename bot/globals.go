@@ -8,7 +8,7 @@ const welcomeText = `🤖 *Welcome to Telekilogram\!*
 
 I'm your feed assistant\. I can help you:
 
-– Follow feeds by sending me URLs
+– Follow RSS/Atom feeds and public Telegram channels by sending me URLs
 – Get feed list with /list
 – Unfollow feeds directly from list
 – Receive 24h auto\-digest daily automatically \(default \- 00:00 UTC\)

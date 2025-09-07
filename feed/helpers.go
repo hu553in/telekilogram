@@ -28,14 +28,21 @@ func FindValidFeeds(text string) ([]models.Feed, error) {
 		return nil, fmt.Errorf("failed to create regexp: %w", err)
 	}
 
-	urls := re.FindAllString(text, -1)
-	feeds := make([]models.Feed, 0, len(urls))
+	URLs := re.FindAllString(text, -1)
+	feeds := make([]models.Feed, 0, len(URLs))
 	var errs []error
 
-	for _, u := range urls {
+	for _, u := range URLs {
 		feed, err := validateFeed(u)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to validate feed: %w", err))
+
+			continue
+		}
+		if feed == nil {
+			errs = append(errs, fmt.Errorf("failed to validate feed"))
+
+			continue
 		}
 
 		feeds = append(feeds, *feed)
@@ -130,14 +137,44 @@ func FormatPostsAsMessages(posts []models.Post) []string {
 	return messages
 }
 
+func telegramChannelCanonicalURL(slug string) string {
+	return fmt.Sprintf("https://%s/s/%s", TelegramHost, slug)
+}
+
 func validateFeed(feedURL string) (*models.Feed, error) {
 	if _, err := url.Parse(feedURL); err != nil {
 		return nil, fmt.Errorf("failed to parse URL: %w", err)
 	}
 
+	if ok, slug := isTelegramChannelURL(feedURL); ok {
+		title, err := fetchTelegramChannelTitle(slug)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"failed to fetch Telegram channel title: %w",
+				err,
+			)
+		}
+
+		if title == "" {
+			slog.Warn("Empty feed title",
+				slog.Any("feedURL", feedURL))
+
+			title = feedURL
+		}
+
+		return &models.Feed{
+			URL:   telegramChannelCanonicalURL(slug),
+			Title: title,
+		}, nil
+	}
+
 	parsed, err := libParser.ParseURL(feedURL)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse feed by URL %q: %w", feedURL, err)
+		return nil, fmt.Errorf(
+			"failed to parse feed by URL %q: %w",
+			feedURL,
+			err,
+		)
 	}
 
 	title := parsed.Title
@@ -148,8 +185,5 @@ func validateFeed(feedURL string) (*models.Feed, error) {
 		title = feedURL
 	}
 
-	return &models.Feed{
-		URL:   feedURL,
-		Title: title,
-	}, nil
+	return &models.Feed{URL: feedURL, Title: title}, nil
 }

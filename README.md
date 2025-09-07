@@ -6,11 +6,15 @@ Feed assistant Telegram bot written in Go.
 
 ## Functionality
 
-- Follow feeds by sending URLs to bot
+- Follow RSS/Atom feeds and public Telegram channels by sending URLs to bot
 - Get feed list with `/list`
 - Unfollow feeds directly from list
 - Receive 24h auto-digest daily automatically (default - 00:00 UTC)
 - Receive 24h digest with `/digest`
+- Message format:
+  - RSS/Atom feeds: grouped digest with post titles and links
+  - Telegram channels: each new post sent as a separate URL message
+    with link preview enabled
 - Configure user settings with `/settings`
 
 ## Development
@@ -37,6 +41,8 @@ Feed assistant Telegram bot written in Go.
 - [x] Check if adding some debug logs can be useful
   - decided to add when needed
 - [x] Rethink unfollow keyboard (now it's row for each feed)
+- [ ] Properly structure new code related to public Telegram channels
+- [ ] Support adding public Telegram channels from forwarded messages
 - [ ] Check if logs can be enriched with some useful contextual info
 - [ ] Understand if it is needed to implement graceful shutdown, etc.
 - [ ] Trim whitespaces in any significant places

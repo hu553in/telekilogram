@@ -1,14 +1,25 @@
 package feed
 
 import (
+	"net/http"
+	"regexp"
 	"runtime"
 	"time"
 
 	"github.com/mmcdole/gofeed"
 )
 
-const parseFeedGracePeriod = 10 * time.Minute
-const telegramMessageMaxLength = 4096
+const (
+	parseFeedGracePeriod     = 10 * time.Minute
+	telegramMessageMaxLength = 4096
+	TelegramHost             = "t.me"
+)
 
-var libParser = gofeed.NewParser()
-var fetchFeedsMaxConcurrency = runtime.NumCPU() * 10
+var (
+	libParser                = gofeed.NewParser()
+	fetchFeedsMaxConcurrency = runtime.NumCPU() * 10
+	telegramClient           = &http.Client{Timeout: 20 * time.Second}
+	slugRe                   = regexp.MustCompile(`^[A-Za-z0-9_]+$`)
+	userAgent                = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
+		"AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36"
+)

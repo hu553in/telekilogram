@@ -7,7 +7,7 @@ all: check run
 
 [private]
 ensure-build-dir:
-    mkdir -p {{build_dir}}
+    mkdir -p {{ build_dir }}
 
 pre-commit: install-deps lint test build
 
@@ -24,12 +24,12 @@ lint:
 
 test: ensure-build-dir
     go test -v ./... \
-        -coverprofile="{{build_dir}}/coverage.out" \
+        -coverprofile="{{ build_dir }}/coverage.out" \
         -covermode=atomic \
         -coverpkg=./...
 
 build: ensure-build-dir
-    go build -o {{build_dir}}/{{bin_name}}
+    go build -o {{ build_dir }}/{{ bin_name }}
 
 run: ensure-build-dir
-    {{build_dir}}/{{bin_name}}
+    {{ build_dir }}/{{ bin_name }}
