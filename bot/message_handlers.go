@@ -3,6 +3,7 @@ package bot
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"telekilogram/feed"
@@ -12,6 +13,17 @@ import (
 
 func (b *Bot) handleMessage(message *tgbotapi.Message) error {
 	return b.withSpinner(message.Chat.ID, func() error {
+		if message.ForwardFromChat != nil && // if message is forwarded...
+			message.ForwardFromChat.Type == "channel" && // ...from channel...
+			message.ForwardFromChat.UserName != "" { // ...with public user name
+
+			return b.handleForwardedChannel(
+				message.ForwardFromChat,
+				message.Chat.ID,
+				message.From.ID,
+			)
+		}
+
 		switch {
 		case strings.HasPrefix(message.Text, "/start"):
 			return b.handleStartCommand(message.Text, message.Chat.ID, message.From.ID)
@@ -112,4 +124,45 @@ func (b *Bot) handleRandomText(
 	}
 
 	return nil
+}
+
+func (b *Bot) handleForwardedChannel(
+	chat *tgbotapi.Chat,
+	chatID int64,
+	userID int64,
+) error {
+	slug := chat.UserName
+	canonicalURL := feed.TelegramChannelCanonicalURL(slug)
+
+	title := chat.Title
+	if title == "" {
+		slog.Warn("Empty Telegram channel title",
+			slog.Any("canonicalURL", canonicalURL))
+
+		title = canonicalURL
+	}
+
+	if err := b.db.AddFeed(userID, canonicalURL, title); err != nil {
+		errs := []error{fmt.Errorf("failed to add feed: %w", err)}
+
+		sendErr := b.sendMessageWithKeyboard(
+			chatID,
+			"❌ Failed\\.",
+			returnKeyboard,
+		)
+		if sendErr != nil {
+			errs = append(
+				errs,
+				fmt.Errorf("failed to send message with keyboard: %w", sendErr),
+			)
+		}
+
+		return errors.Join(errs...)
+	}
+
+	return b.sendMessageWithKeyboard(
+		chatID,
+		"✅ Success\\.",
+		returnKeyboard,
+	)
 }

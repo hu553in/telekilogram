@@ -50,7 +50,7 @@ func isTelegramChannelURL(raw string) (bool, string) {
 		slug = parts[0]
 	}
 
-	if !slugRe.MatchString(slug) {
+	if !telegramSlugRe.MatchString(slug) {
 		return false, ""
 	}
 
@@ -58,7 +58,7 @@ func isTelegramChannelURL(raw string) (bool, string) {
 }
 
 func fetchTelegramChannelTitle(slug string) (string, error) {
-	canonicalURL := telegramChannelCanonicalURL(slug)
+	canonicalURL := TelegramChannelCanonicalURL(slug)
 
 	req, err := http.NewRequest(http.MethodGet, canonicalURL, nil)
 	if err != nil {
@@ -101,7 +101,8 @@ func fetchTelegramChannelTitle(slug string) (string, error) {
 }
 
 func fetchTelegramChannelItems(slug string) ([]channelItem, string, error) {
-	canonicalURL := telegramChannelCanonicalURL(slug)
+	canonicalURL := TelegramChannelCanonicalURL(slug)
+
 	req, err := http.NewRequest(http.MethodGet, canonicalURL, nil)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to create request: %w", err)

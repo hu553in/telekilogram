@@ -42,7 +42,7 @@ func (fp *FeedParser) ParseFeed(feed *models.UserFeed) ([]models.Post, error) {
 		now := time.Now().Round(time.Hour)
 		cutoffTime := now.Add(-24*time.Hour - parseFeedGracePeriod)
 
-		canonicalURL := telegramChannelCanonicalURL(slug)
+		canonicalURL := TelegramChannelCanonicalURL(slug)
 
 		for _, it := range items {
 			publishedTime := it.published

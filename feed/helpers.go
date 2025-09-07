@@ -23,13 +23,29 @@ type feedGroupKey struct {
 }
 
 func FindValidFeeds(text string) ([]models.Feed, error) {
-	re, err := xurls.StrictMatchingScheme("https://")
+	var slugs []string
+	for _, m := range telegramAtSignSlugRe.FindAllStringSubmatch(text, -1) {
+		if len(m) < 3 {
+			continue
+		}
+
+		slug := m[2]
+		if !telegramSlugRe.MatchString(slug) {
+			continue
+		}
+
+		slugs = append(slugs, slug)
+	}
+
+	httpsURLRe, err := xurls.StrictMatchingScheme("https://")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create regexp: %w", err)
 	}
 
-	URLs := re.FindAllString(text, -1)
-	feeds := make([]models.Feed, 0, len(URLs))
+	URLs := httpsURLRe.FindAllString(text, -1)
+
+	feeds := make([]models.Feed, 0, len(URLs)+len(slugs))
+	seen := make(map[string]struct{}, len(URLs)+len(slugs))
 	var errs []error
 
 	for _, u := range URLs {
@@ -45,7 +61,35 @@ func FindValidFeeds(text string) ([]models.Feed, error) {
 			continue
 		}
 
+		if _, ok := seen[feed.URL]; ok {
+			continue
+		}
+
 		feeds = append(feeds, *feed)
+		seen[feed.URL] = struct{}{}
+	}
+
+	for _, slug := range slugs {
+		canonicalURL := TelegramChannelCanonicalURL(slug)
+
+		feed, err := validateFeed(canonicalURL)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("failed to validate feed: %w", err))
+
+			continue
+		}
+		if feed == nil {
+			errs = append(errs, fmt.Errorf("failed to validate feed"))
+
+			continue
+		}
+
+		if _, ok := seen[feed.URL]; ok {
+			continue
+		}
+
+		feeds = append(feeds, *feed)
+		seen[feed.URL] = struct{}{}
 	}
 
 	return feeds, errors.Join(errs...)
@@ -137,7 +181,7 @@ func FormatPostsAsMessages(posts []models.Post) []string {
 	return messages
 }
 
-func telegramChannelCanonicalURL(slug string) string {
+func TelegramChannelCanonicalURL(slug string) string {
 	return fmt.Sprintf("https://%s/s/%s", TelegramHost, slug)
 }
 
@@ -155,15 +199,17 @@ func validateFeed(feedURL string) (*models.Feed, error) {
 			)
 		}
 
-		if title == "" {
-			slog.Warn("Empty feed title",
-				slog.Any("feedURL", feedURL))
+		canonicalURL := TelegramChannelCanonicalURL(slug)
 
-			title = feedURL
+		if title == "" {
+			slog.Warn("Empty Telegram channel title",
+				slog.Any("canonicalURL", canonicalURL))
+
+			title = canonicalURL
 		}
 
 		return &models.Feed{
-			URL:   telegramChannelCanonicalURL(slug),
+			URL:   canonicalURL,
 			Title: title,
 		}, nil
 	}
