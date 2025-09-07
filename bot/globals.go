@@ -8,7 +8,7 @@ const welcomeText = `🤖 *Welcome to Telekilogram\!*
 
 I'm your feed assistant\. I can help you:
 
-– Follow RSS/Atom/JSON feeds and public Telegram channels by sending URLs,
+– Follow RSS / Atom / JSON feeds and public Telegram channels by sending URLs,
   channel @username slugs, or forwarding messages from channels to me
 – Get feed list with /list
 – Unfollow feeds directly from list

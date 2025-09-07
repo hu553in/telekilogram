@@ -4,7 +4,7 @@
 - `main.go`: Entry point; loads `.env`, initializes bot, DB, scheduler.
  - `bot/`: Telegram handlers, keyboards, and helpers; uses rate limiter; supports adding public channels via forwarded messages.
 - `database/`: SQLite access with embedded migrations (`database/migrations/`).
-- `feed/`: RSS/Atom/JSON parsing plus public Telegram channel support:
+- `feed/`: RSS / Atom / JSON parsing plus public Telegram channel support:
   scrapes `t.me/<channel>` summary pages with `goquery`, detects `@username`
   slugs in text and canonicalizes to channel URLs, filters last 24h, formats
   feed digests, and emits channel posts as URLs.

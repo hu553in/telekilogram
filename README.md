@@ -6,14 +6,14 @@ Feed assistant Telegram bot written in Go.
 
 ## Functionality
 
-- Follow RSS/Atom/JSON feeds and public Telegram channels by sending URLs,
+- Follow RSS / Atom / JSON feeds and public Telegram channels by sending URLs,
   channel `@username` slugs, or forwarding messages from channels to bot
 - Get feed list with `/list`
 - Unfollow feeds directly from list
 - Receive 24h auto-digest daily automatically (default - 00:00 UTC)
 - Receive 24h digest with `/digest`
 - Message format:
-  - RSS/Atom/JSON feeds: grouped digest with post titles and links
+  - RSS / Atom / JSON feeds: grouped digest with post titles and links
   - Telegram channels: each new post sent as a separate URL message
     with link preview enabled
 - Configure user settings with `/settings`
