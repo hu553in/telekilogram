@@ -61,16 +61,12 @@ The architecture follows a clear separation of concerns:
 
 ### Environment Configuration
 
-Required:
-
-- `TOKEN`: Telegram bot token
-
-Optional:
-
-- `DB_PATH`: SQLite database path (defaults to `./db`)
-- `ALLOWED_USERS`: Comma-separated list of allowed Telegram user IDs (empty = allow all)
-- `OPENAI_API_KEY`: Enables OpenAI-backed Telegram summaries (omit to use a
-  local truncation fallback)
+| Name             | Required | Default | Description                                                                                                                                                         |
+| ---------------- | -------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TOKEN`          | Yes      | –       | Telegram bot token obtained from BotFather.                                                                                                                         |
+| `DB_PATH`        | No       | `./db`  | Filesystem location of the SQLite database. Creates the directory on first run if it does not exist.                                                                |
+| `ALLOWED_USERS`  | No       | –       | Comma-separated list of Telegram user IDs allowed to interact with the bot. Each entry must be a valid 64-bit integer; startup fails if any value cannot be parsed. |
+| `OPENAI_API_KEY` | No       | –       | Enables OpenAI-backed summaries for Telegram channel posts. Leave unset to fall back to local truncation.                                                           |
 
 ### Database Schema
 

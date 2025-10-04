@@ -57,3 +57,12 @@ Example first run: `cp .env.example .env && just all`.
   Telegram summary generation).
 - CI deploy uses SSH secrets and `scripts/deploy.sh`; verify env values are set.
 - Avoid logging sensitive values; prefer IDs over tokens/URLs in logs.
+
+### Environment variables
+
+| Name             | Required | Default | Description                                                                                                                                                         |
+| ---------------- | -------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TOKEN`          | Yes      | –       | Telegram bot token obtained from BotFather.                                                                                                                         |
+| `DB_PATH`        | No       | `./db`  | Filesystem location of the SQLite database. Creates the directory on first run if it does not exist.                                                                |
+| `ALLOWED_USERS`  | No       | –       | Comma-separated list of Telegram user IDs allowed to interact with the bot. Each entry must be a valid 64-bit integer; startup fails if any value cannot be parsed. |
+| `OPENAI_API_KEY` | No       | –       | Enables OpenAI-backed summaries for Telegram channel posts. Leave unset to fall back to local truncation.                                                           |
