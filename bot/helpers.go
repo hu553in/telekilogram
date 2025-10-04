@@ -26,16 +26,6 @@ func (b *Bot) sendMessageWithKeyboard(
 	return err
 }
 
-func (b *Bot) sendURLWithPreview(chatID int64, URL string) error {
-	message := tgbotapi.NewMessage(chatID, URL)
-
-	message.DisableWebPagePreview = false
-
-	_, err := b.rateLimiter.Send(message)
-
-	return err
-}
-
 func (b *Bot) sendChatAction(chatID int64, action string) error {
 	config := tgbotapi.NewChatAction(chatID, action)
 	_, err := b.rateLimiter.Request(config)

@@ -14,6 +14,7 @@ I'm your feed assistant\. I can help you:
 – Unfollow feeds directly from list
 – Receive 24h auto\-digest daily automatically \(default \- 00:00 UTC\)
 – Receive 24h digest with /digest
+– Get concise summaries for Telegram channel posts \(AI when configured\)
 – Configure user settings with /settings`
 
 const settingsText = `*⚙️ Settings*

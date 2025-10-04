@@ -15,6 +15,7 @@ import (
 
 type channelItem struct {
 	URL       string
+	Text      string
 	published time.Time
 }
 
@@ -100,7 +101,7 @@ func fetchTelegramChannelTitle(slug string) (string, error) {
 	), nil
 }
 
-func fetchTelegramChannelItems(slug string) ([]channelItem, string, error) {
+func fetchTelegramChannelPosts(slug string) ([]channelItem, string, error) {
 	canonicalURL := TelegramChannelCanonicalURL(slug)
 
 	req, err := http.NewRequest(http.MethodGet, canonicalURL, nil)
@@ -143,6 +144,22 @@ func fetchTelegramChannelItems(slug string) ([]channelItem, string, error) {
 			return
 		}
 
+		var textBuilder strings.Builder
+		message := s.ParentsFiltered(".tgme_widget_message").First()
+		message.Find(".tgme_widget_message_text, .tgme_widget_message_caption").Each(
+			func(_ int, inner *goquery.Selection) {
+				fragment := strings.TrimSpace(inner.Text())
+				if fragment == "" {
+					return
+				}
+				if textBuilder.Len() > 0 {
+					textBuilder.WriteString("\n")
+				}
+				textBuilder.WriteString(fragment)
+			},
+		)
+		text := strings.TrimSpace(textBuilder.String())
+
 		var t time.Time
 		datetime := strings.TrimSpace(s.Find("time").AttrOr("datetime", ""))
 
@@ -158,7 +175,7 @@ func fetchTelegramChannelItems(slug string) ([]channelItem, string, error) {
 			t = time.Now().UTC()
 		}
 
-		items = append(items, channelItem{URL: href, published: t})
+		items = append(items, channelItem{URL: href, Text: text, published: t})
 	})
 
 	var title string

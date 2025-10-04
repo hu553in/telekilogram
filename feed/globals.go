@@ -10,9 +10,10 @@ import (
 )
 
 const (
-	parseFeedGracePeriod     = 10 * time.Minute
-	telegramMessageMaxLength = 4096
-	TelegramHost             = "t.me"
+	parseFeedGracePeriod            = 10 * time.Minute
+	telegramMessageMaxLength        = 4096
+	TelegramHost                    = "t.me"
+	fallbackTelegramSummaryMaxChars = 200
 )
 
 var (

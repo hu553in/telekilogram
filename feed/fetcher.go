@@ -1,12 +1,14 @@
 package feed
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sync"
 
 	"telekilogram/database"
 	"telekilogram/models"
+	"telekilogram/summarizer"
 )
 
 type FeedFetcher struct {
@@ -14,10 +16,13 @@ type FeedFetcher struct {
 	parser *FeedParser
 }
 
-func NewFeedFetcher(db *database.Database) *FeedFetcher {
+func NewFeedFetcher(
+	db *database.Database,
+	s summarizer.Summarizer,
+) *FeedFetcher {
 	return &FeedFetcher{
 		db:     db,
-		parser: NewFeedParser(db),
+		parser: NewFeedParser(db, s),
 	}
 }
 
@@ -29,7 +34,7 @@ func (ff *FeedFetcher) FetchHourFeeds(
 		return nil, fmt.Errorf("failed to get hour feeds: %w", err)
 	}
 
-	return ff.fetchFeeds(feeds)
+	return ff.fetchFeeds(context.Background(), feeds)
 }
 
 func (ff *FeedFetcher) FetchUserFeeds(
@@ -40,10 +45,11 @@ func (ff *FeedFetcher) FetchUserFeeds(
 		return nil, fmt.Errorf("failed to get user feeds: %w", err)
 	}
 
-	return ff.fetchFeeds(feeds)
+	return ff.fetchFeeds(context.Background(), feeds)
 }
 
 func (ff *FeedFetcher) fetchFeeds(
+	ctx context.Context,
 	feeds []models.UserFeed,
 ) (map[int64][]models.Post, error) {
 	var writeWg sync.WaitGroup
@@ -59,6 +65,7 @@ func (ff *FeedFetcher) fetchFeeds(
 		semCh <- struct{}{}
 
 		go func(
+			ctx context.Context,
 			f *models.UserFeed,
 			writeWg *sync.WaitGroup,
 			semCh chan struct{},
@@ -68,7 +75,7 @@ func (ff *FeedFetcher) fetchFeeds(
 		) {
 			defer writeWg.Done()
 
-			posts, err := ff.parser.ParseFeed(f)
+			posts, err := ff.parser.ParseFeed(ctx, f)
 			if err != nil {
 				errCh <- fmt.Errorf("failed to parse feed: %w", err)
 			}
@@ -78,7 +85,7 @@ func (ff *FeedFetcher) fetchFeeds(
 			}
 
 			<-semCh
-		}(&f, &writeWg, semCh, userPostCh, errCh, ff)
+		}(ctx, &f, &writeWg, semCh, userPostCh, errCh, ff)
 	}
 
 	go func(

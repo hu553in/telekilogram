@@ -12,6 +12,7 @@ SERVICE_PATH="/etc/systemd/system/${APP_NAME}.service"
 
 echo "TOKEN=\"${TOKEN}\"" > ${ENV_PATH}
 echo "ALLOWED_USERS=\"${ALLOWED_USERS}\"" >> ${ENV_PATH}
+echo "OPENAI_API_KEY=\"${OPENAI_API_KEY}\"" >> ${ENV_PATH}
 
 # stop old instance ignoring errors
 

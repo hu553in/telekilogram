@@ -74,3 +74,4 @@ jobs:
           SSH_PORT: ${{ secrets.SSH_PORT }}
           TOKEN: ${{ secrets.TOKEN }}
           ALLOWED_USERS: ${{ secrets.ALLOWED_USERS }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}

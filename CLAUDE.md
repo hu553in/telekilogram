@@ -24,7 +24,8 @@ The architecture follows a clear separation of concerns:
 ### Core Components
 
 - **main.go**: Entry point that initializes all components,
-  handles environment variables (`TOKEN`, `DB_PATH`, `ALLOWED_USERS`),
+  handles environment variables (`TOKEN`, `DB_PATH`, `ALLOWED_USERS`,
+  `OPENAI_API_KEY`), falls back when optional ones are missing,
   and sets up graceful shutdown
 - **bot/**: Telegram bot interface handling user commands with deep link support
   (`/start`, `/menu`, `/list`, `/digest`, `/filter`, `/settings`),
@@ -33,11 +34,14 @@ The architecture follows a clear separation of concerns:
   for private chats (1s) and group chats (3s), includes graceful shutdown
 - **database/**: SQLite database layer with embedded migrations,
   managing feed storage, user associations and settings
-- **feed/**: Feed processing system with fetcher, parser, and URL validation utilities
+- **feed/**: Feed processing system with fetcher, parser, and URL validation
+  utilities plus Telegram summary generation (OpenAI when configured,
+  local fallback otherwise)
 - **scheduler/**: Cron-based scheduler that automatically sends digests daily
   (default - 00:00 UTC)
 - **models/**: Data structures for `Feed`, `UserFeed`, `Post` and `UserSettings` entities
 - **markdown/**: Markdown utilities
+- **summarizer/**: Pluggable summarizer interface with the OpenAI client adapter
 
 ### Key Patterns
 
@@ -48,6 +52,7 @@ The architecture follows a clear separation of concerns:
 - User authorization is handled via `ALLOWED_USERS` environment variable
   (comma-separated `int64` list)
 - Feed URLs are automatically detected from user messages and validated
+- Telegram channel items are summarized before being added to digests
 - Bot responses use inline keyboards for navigation with improved separation
   between command handlers, callback query handlers, and helper functions
 - Feed list displays unfollow links using deep links
@@ -63,6 +68,8 @@ Optional:
 
 - `DB_PATH`: SQLite database path (defaults to `./db`)
 - `ALLOWED_USERS`: Comma-separated list of allowed Telegram user IDs (empty = allow all)
+- `OPENAI_API_KEY`: Enables OpenAI-backed Telegram summaries (omit to use a
+  local truncation fallback)
 
 ### Database Schema
 
@@ -74,5 +81,7 @@ Optional:
 
 - Supports feeds via `github.com/mmcdole/gofeed`
 - Filters posts to last 24 hours for digest functionality
+- Summarizes Telegram channel entries (AI when configured, trimmed text
+  otherwise)
 - Formats posts as Telegram messages with MarkdownV2 escaping
 - Handles feed parsing errors gracefully

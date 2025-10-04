@@ -7,10 +7,12 @@
 - `feed/`: RSS / Atom / JSON parsing plus public Telegram channel support:
   scrapes `t.me/<channel>` summary pages with `goquery`, detects `@username`
   slugs in text and canonicalizes to channel URLs, filters last 24h, formats
-  feed digests, and emits channel posts as URLs.
+  feed digests, and emits channel posts as summarized Markdown entries.
 - `scheduler/`: Cron job that triggers hourly digests (UTC).
 - `ratelimiter/`: Queued sending with chat-aware delays.
 - `models/`, `markdown/`: Shared types and MarkdownV2 escaping.
+- `summarizer/`: Summarizer interface with OpenAI-backed implementation
+  for Telegram channel items (optional at runtime).
 - `scripts/`: Deploy helpers used by CI.
 - Build artifacts go to `./build/`.
 
@@ -31,7 +33,8 @@ Example first run: `cp .env.example .env && just all`.
 - Logging: Use `log/slog` with structured fields.
 - Errors: Wrap with `fmt.Errorf` and use `errors.Join` when aggregating.
 - Messaging: For grouped digests use MarkdownV2 and keyboards.
-  For Telegram channel posts send plain URL via `sendURLWithPreview` (previews on).
+  Telegram channel posts are summarized (OpenAI when configured,
+  otherwise local truncation) and included in digests as Markdown links.
 
 ## Testing Guidelines
 - Framework: standard `testing`. Place tests next to code as `*_test.go`.
@@ -49,6 +52,7 @@ Example first run: `cp .env.example .env && just all`.
 
 ## Security & Configuration
 - Secrets: never commit `.env`. Required: `TOKEN`. Optional: `DB_PATH`,
-  `ALLOWED_USERS` (comma-separated int64s).
+  `ALLOWED_USERS` (comma-separated int64s), `OPENAI_API_KEY` (enables
+  Telegram summary generation).
 - CI deploy uses SSH secrets and `scripts/deploy.sh`; verify env values are set.
 - Avoid logging sensitive values; prefer IDs over tokens/URLs in logs.

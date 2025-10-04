@@ -1,26 +1,38 @@
 package feed
 
 import (
+	"context"
 	"fmt"
+	"log/slog"
+	"strings"
 	"time"
 
 	"telekilogram/database"
 	"telekilogram/models"
+	"telekilogram/summarizer"
 )
 
 type FeedParser struct {
-	db *database.Database
+	db         *database.Database
+	summarizer summarizer.Summarizer
 }
 
-func NewFeedParser(db *database.Database) *FeedParser {
+func NewFeedParser(
+	db *database.Database,
+	s summarizer.Summarizer,
+) *FeedParser {
 	return &FeedParser{
-		db: db,
+		db:         db,
+		summarizer: s,
 	}
 }
 
-func (fp *FeedParser) ParseFeed(feed *models.UserFeed) ([]models.Post, error) {
+func (fp *FeedParser) ParseFeed(
+	ctx context.Context,
+	feed *models.UserFeed,
+) ([]models.Post, error) {
 	if ok, slug := isTelegramChannelURL(feed.URL); ok {
-		items, title, err := fetchTelegramChannelItems(slug)
+		items, channelTitle, err := fetchTelegramChannelPosts(slug)
 		if err != nil {
 			return nil, fmt.Errorf(
 				"failed to fetch Telegram channel items: %w",
@@ -29,8 +41,8 @@ func (fp *FeedParser) ParseFeed(feed *models.UserFeed) ([]models.Post, error) {
 		}
 
 		var updateTitleErr error
-		if title != "" && title != feed.Title {
-			if err := fp.db.UpdateFeedTitle(feed.ID, title); err != nil {
+		if channelTitle != "" && channelTitle != feed.Title {
+			if err := fp.db.UpdateFeedTitle(feed.ID, channelTitle); err != nil {
 				updateTitleErr = fmt.Errorf(
 					"failed to update feed title: %w",
 					err,
@@ -43,6 +55,13 @@ func (fp *FeedParser) ParseFeed(feed *models.UserFeed) ([]models.Post, error) {
 		cutoffTime := now.Add(-24*time.Hour - parseFeedGracePeriod)
 
 		canonicalURL := TelegramChannelCanonicalURL(slug)
+		feedTitle := channelTitle
+		if feedTitle == "" {
+			feedTitle = feed.Title
+		}
+		if feedTitle == "" {
+			feedTitle = canonicalURL
+		}
 
 		for _, it := range items {
 			publishedTime := it.published
@@ -53,10 +72,10 @@ func (fp *FeedParser) ParseFeed(feed *models.UserFeed) ([]models.Post, error) {
 
 			if publishedTime.After(cutoffTime) {
 				newPosts = append(newPosts, models.Post{
-					Title:     it.URL,
+					Title:     fp.summarizeTelegramPost(ctx, it),
 					URL:       it.URL,
 					FeedID:    feed.ID,
-					FeedTitle: title,
+					FeedTitle: feedTitle,
 					FeedURL:   canonicalURL,
 				})
 			}
@@ -106,4 +125,56 @@ func (fp *FeedParser) ParseFeed(feed *models.UserFeed) ([]models.Post, error) {
 	}
 
 	return newPosts, updateTitleErr
+}
+
+func (fp *FeedParser) summarizeTelegramPost(
+	ctx context.Context,
+	item channelItem,
+) string {
+	text := strings.TrimSpace(item.Text)
+	if text == "" {
+		return item.URL
+	}
+
+	if fp.summarizer == nil {
+		return fallbackTelegramSummary(text, item.URL)
+	}
+
+	summary, err := fp.summarizer.Summarize(ctx, summarizer.Input{
+		Text:      text,
+		SourceURL: item.URL,
+	})
+	if err != nil {
+		slog.Error("Failed to summarize Telegram channel post",
+			slog.Any("err", err),
+			slog.String("url", item.URL))
+
+		return fallbackTelegramSummary(text, item.URL)
+	}
+
+	summary = strings.TrimSpace(summary)
+	if summary == "" {
+		return fallbackTelegramSummary(text, item.URL)
+	}
+
+	return summary
+}
+
+func fallbackTelegramSummary(text string, itemURL string) string {
+	normalized := strings.Join(strings.Fields(text), " ")
+	if normalized == "" {
+		return itemURL
+	}
+
+	runes := []rune(normalized)
+	if len(runes) <= fallbackTelegramSummaryMaxChars {
+		return normalized
+	}
+
+	trimmed := strings.TrimSpace(string(runes[:fallbackTelegramSummaryMaxChars]))
+	if trimmed == "" {
+		return normalized
+	}
+
+	return trimmed + "..."
 }

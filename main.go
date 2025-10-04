@@ -14,6 +14,7 @@ import (
 	"telekilogram/database"
 	"telekilogram/feed"
 	"telekilogram/scheduler"
+	"telekilogram/summarizer"
 )
 
 func main() {
@@ -75,7 +76,9 @@ func main() {
 		allowedUsers = append(allowedUsers, userID)
 	}
 
-	fetcher := feed.NewFeedFetcher(db)
+	summarizer := initOpenAISummarizer()
+	fetcher := feed.NewFeedFetcher(db, summarizer)
+
 	botInst, err := bot.New(token, db, fetcher, allowedUsers)
 	if err != nil {
 		slog.Error("Failed to initialize bot",
@@ -108,4 +111,27 @@ func main() {
 
 	botInst.Stop()
 	slog.Info("Bot is stopped")
+}
+
+func initOpenAISummarizer() summarizer.Summarizer {
+	apiKey := strings.TrimSpace(os.Getenv("OPENAI_API_KEY"))
+	if apiKey == "" {
+		slog.Warn("OPENAI_API_KEY is missing so fallback will be used")
+
+		return nil
+	}
+
+	s, err := summarizer.NewOpenAISummarizer(
+		summarizer.OpenAIConfig{APIKey: apiKey},
+	)
+	if err != nil {
+		slog.Error("Failed to create OpenAI summarizer so fallback will be used",
+			slog.Any("err", err))
+
+		return nil
+	}
+
+	slog.Info("OpenAI summarizer is initialized")
+
+	return s
 }

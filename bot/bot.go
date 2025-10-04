@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"net/url"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
@@ -85,49 +84,14 @@ func (b *Bot) SendNewPosts(chatID int64, posts []models.Post) error {
 		return nil
 	}
 
-	var tgPosts []models.Post
-	var otherPosts []models.Post
-
-	for _, p := range posts {
-		if u, err := url.Parse(p.FeedURL); err == nil && u.Host == feed.TelegramHost {
-			tgPosts = append(tgPosts, p)
-		} else {
-			otherPosts = append(otherPosts, p)
-		}
-	}
-
 	var errs []error
 
-	if len(otherPosts) > 0 {
-		messages := feed.FormatPostsAsMessages(otherPosts)
+	messages := feed.FormatPostsAsMessages(posts)
 
-		for _, message := range messages {
-			if err := b.sendMessageWithKeyboard(
-				chatID,
-				message,
-				returnKeyboard,
-			); err != nil {
-				errs = append(
-					errs,
-					fmt.Errorf("failed to send message with keyboard: %w", err),
-				)
-			}
-		}
-	}
-
-	for _, p := range tgPosts {
-		if err := b.sendURLWithPreview(chatID, p.URL); err != nil {
-			errs = append(
-				errs,
-				fmt.Errorf("failed to send URL with preview: %w", err),
-			)
-		}
-	}
-
-	if len(tgPosts) > 0 {
+	for _, message := range messages {
 		if err := b.sendMessageWithKeyboard(
 			chatID,
-			"❔ *Choose an option:*",
+			message,
 			returnKeyboard,
 		); err != nil {
 			errs = append(
