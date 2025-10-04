@@ -36,7 +36,8 @@ The architecture follows a clear separation of concerns:
   managing feed storage, user associations and settings
 - **feed/**: Feed processing system with fetcher, parser, and URL validation
   utilities plus Telegram summary generation (OpenAI when configured,
-  local fallback otherwise)
+  local fallback otherwise) and an in-memory 24h cache to avoid re-summarising
+  identical Telegram posts across users
 - **scheduler/**: Cron-based scheduler that automatically sends digests daily
   (default - 00:00 UTC)
 - **models/**: Data structures for `Feed`, `UserFeed`, `Post` and `UserSettings` entities

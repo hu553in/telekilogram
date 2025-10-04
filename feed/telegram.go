@@ -19,6 +19,23 @@ type channelItem struct {
 	published time.Time
 }
 
+func TelegramMessageCanonicalURL(raw string) string {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return ""
+	}
+
+	u, err := url.Parse(trimmed)
+	if err != nil {
+		return trimmed
+	}
+
+	u.RawQuery = ""
+	u.Fragment = ""
+
+	return u.String()
+}
+
 func isTelegramChannelURL(raw string) (bool, string) {
 	u, err := url.Parse(raw)
 	if err != nil {
@@ -143,6 +160,8 @@ func fetchTelegramChannelPosts(slug string) ([]channelItem, string, error) {
 		if !ok || href == "" {
 			return
 		}
+
+		href = TelegramMessageCanonicalURL(href)
 
 		var textBuilder strings.Builder
 		message := s.ParentsFiltered(".tgme_widget_message").First()

@@ -2,6 +2,8 @@ package feed
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -13,8 +15,9 @@ import (
 )
 
 type FeedParser struct {
-	db         *database.Database
-	summarizer summarizer.Summarizer
+	db           *database.Database
+	summarizer   summarizer.Summarizer
+	summaryCache *telegramSummaryCache
 }
 
 func NewFeedParser(
@@ -22,8 +25,9 @@ func NewFeedParser(
 	s summarizer.Summarizer,
 ) *FeedParser {
 	return &FeedParser{
-		db:         db,
-		summarizer: s,
+		db:           db,
+		summarizer:   s,
+		summaryCache: newTelegramSummaryCache(telegramSummaryCacheMaxEntries),
 	}
 }
 
@@ -136,6 +140,15 @@ func (fp *FeedParser) summarizeTelegramPost(
 		return item.URL
 	}
 
+	now := time.Now().UTC()
+	cacheKey := telegramSummaryCacheKey(item.URL, text)
+
+	if cacheKey != "" && fp.summaryCache != nil {
+		if summary, ok := fp.summaryCache.get(cacheKey, now); ok {
+			return summary
+		}
+	}
+
 	if fp.summarizer == nil {
 		return fallbackTelegramSummary(text, item.URL)
 	}
@@ -157,7 +170,33 @@ func (fp *FeedParser) summarizeTelegramPost(
 		return fallbackTelegramSummary(text, item.URL)
 	}
 
+	published := item.published
+	if published.IsZero() {
+		published = now
+	}
+
+	expiresAt := published.Add(24*time.Hour + parseFeedGracePeriod)
+	if expiresAt.After(now) && cacheKey != "" && fp.summaryCache != nil {
+		fp.summaryCache.set(cacheKey, summary, expiresAt, now)
+	}
+
 	return summary
+}
+
+func telegramSummaryCacheKey(rawURL string, text string) string {
+	canonicalURL := TelegramMessageCanonicalURL(rawURL)
+	if canonicalURL == "" {
+		return ""
+	}
+
+	normalizedText := strings.TrimSpace(text)
+	if normalizedText == "" {
+		return ""
+	}
+
+	hash := sha256.Sum256([]byte(normalizedText))
+
+	return canonicalURL + "|" + hex.EncodeToString(hash[:])
 }
 
 func fallbackTelegramSummary(text string, itemURL string) string {

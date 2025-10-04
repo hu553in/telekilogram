@@ -13,7 +13,8 @@ Feed assistant Telegram bot written in Go.
 - Receive 24h auto-digest daily automatically (default - 00:00 UTC)
 - Receive 24h digest with `/digest`
 - Summarize Telegram channel posts with OpenAI (falls back to local truncation
-  when `OPENAI_API_KEY` is not provided)
+  when `OPENAI_API_KEY` is not provided) and cache each summary for 24h to avoid
+  reprocessing the same post across users
 - Message format:
   - RSS / Atom / JSON feeds: grouped digest with post titles and links
   - Telegram channels: digest bullet with AI summary (or trimmed message text)
@@ -48,7 +49,7 @@ Feed assistant Telegram bot written in Go.
   - decided that it's not needed
 - [x] Support adding public Telegram channels from forwarded messages
 - [x] Add AI summaries of Telegram channel posts
-- [ ] Cache AI summaries of Telegram channel posts
+- [x] Cache AI summaries of Telegram channel posts
 - [ ] Parallelise AI summarization of Telegram channel posts
 - [ ] Check if logs can be enriched with some useful contextual info
 - [ ] Understand if it is needed to implement graceful shutdown, etc.

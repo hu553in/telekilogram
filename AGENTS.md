@@ -6,8 +6,9 @@
 - `database/`: SQLite access with embedded migrations (`database/migrations/`).
 - `feed/`: RSS / Atom / JSON parsing plus public Telegram channel support:
   scrapes `t.me/<channel>` summary pages with `goquery`, detects `@username`
-  slugs in text and canonicalizes to channel URLs, filters last 24h, formats
-  feed digests, and emits channel posts as summarized Markdown entries.
+  slugs in text and canonicalizes to channel URLs, filters last 24h, caches
+  AI summaries per-channel post for 24h, formats feed digests, and emits posts
+  as summarized Markdown entries.
 - `scheduler/`: Cron job that triggers hourly digests (UTC).
 - `ratelimiter/`: Queued sending with chat-aware delays.
 - `models/`, `markdown/`: Shared types and MarkdownV2 escaping.
