@@ -7,12 +7,20 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"sync"
 	"time"
 
 	"telekilogram/database"
 	"telekilogram/models"
 	"telekilogram/summarizer"
 )
+
+const telegramSummariesMaxParallelism = 4
+
+type telegramSummarizationCandidate struct {
+	postIndex int
+	item      channelItem
+}
 
 type FeedParser struct {
 	db           *database.Database
@@ -54,11 +62,14 @@ func (fp *FeedParser) ParseFeed(
 			}
 		}
 
-		var newPosts []models.Post
-		now := time.Now().Round(time.Hour)
-		cutoffTime := now.Add(-24*time.Hour - parseFeedGracePeriod)
+		var (
+			newPosts     []models.Post
+			now          = time.Now().Round(time.Hour)
+			cutoffTime   = now.Add(-24*time.Hour - parseFeedGracePeriod)
+			candidates   []telegramSummarizationCandidate
+			canonicalURL = TelegramChannelCanonicalURL(slug)
+		)
 
-		canonicalURL := TelegramChannelCanonicalURL(slug)
 		feedTitle := channelTitle
 		if feedTitle == "" {
 			feedTitle = feed.Title
@@ -75,13 +86,28 @@ func (fp *FeedParser) ParseFeed(
 			}
 
 			if publishedTime.After(cutoffTime) {
+				postIndex := len(newPosts)
 				newPosts = append(newPosts, models.Post{
-					Title:     fp.summarizeTelegramPost(ctx, it),
 					URL:       it.URL,
 					FeedID:    feed.ID,
 					FeedTitle: feedTitle,
 					FeedURL:   canonicalURL,
 				})
+
+				candidates = append(candidates, telegramSummarizationCandidate{
+					postIndex: postIndex,
+					item:      it,
+				})
+			}
+		}
+
+		if len(candidates) > 0 {
+			summaries := fp.summarizeTelegramPosts(ctx, candidates)
+			for i := range candidates {
+				candidate := candidates[i]
+				if candidate.postIndex >= 0 && candidate.postIndex < len(newPosts) {
+					newPosts[candidate.postIndex].Title = summaries[i]
+				}
 			}
 		}
 
@@ -129,6 +155,54 @@ func (fp *FeedParser) ParseFeed(
 	}
 
 	return newPosts, updateTitleErr
+}
+
+func (fp *FeedParser) summarizeTelegramPosts(
+	ctx context.Context,
+	candidates []telegramSummarizationCandidate,
+) []string {
+	summaries := make([]string, len(candidates))
+	if len(candidates) == 0 {
+		return summaries
+	}
+
+	workerCount := telegramSummariesMaxParallelism
+	if workerCount <= 0 {
+		workerCount = 1
+	}
+	if workerCount > len(candidates) {
+		workerCount = len(candidates)
+	}
+
+	type task struct {
+		resultIndex int
+		candidate   telegramSummarizationCandidate
+	}
+
+	tasks := make(chan task)
+	var wg sync.WaitGroup
+
+	for i := 0; i < workerCount; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for t := range tasks {
+				summaries[t.resultIndex] = fp.summarizeTelegramPost(ctx, t.candidate.item)
+			}
+		}()
+	}
+
+	for i := range candidates {
+		tasks <- task{
+			resultIndex: i,
+			candidate:   candidates[i],
+		}
+	}
+
+	close(tasks)
+	wg.Wait()
+
+	return summaries
 }
 
 func (fp *FeedParser) summarizeTelegramPost(

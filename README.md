@@ -59,12 +59,13 @@ Feed assistant Telegram bot written in Go.
 - [x] Support adding public Telegram channels from forwarded messages
 - [x] Add AI summaries of Telegram channel posts
 - [x] Cache AI summaries of Telegram channel posts
-- [ ] Parallelise AI summarization of Telegram channel posts
+- [x] Parallelise AI summarization of Telegram channel posts
 - [ ] Check if logs can be enriched with some useful contextual info
 - [ ] Understand if it is needed to implement graceful shutdown, etc.
 - [ ] Trim whitespaces in any significant places
 - [ ] Fully protect Telegram max message length in feed list and digest
 - [ ] Add tests (at least for critical functionality)
 - [ ] Add paid subscription (with free tier)
+- [ ] Create mini app
 - [ ] Deploy using Docker instead of `systemd` service (optional)
 - [ ] Migrate to https://github.com/go-telegram/bot (optional)

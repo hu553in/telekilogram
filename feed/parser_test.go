@@ -35,6 +35,29 @@ func (s *stubSummarizer) callCount() int {
 	return s.calls
 }
 
+type echoCountingSummarizer struct {
+	mu    sync.Mutex
+	calls int
+}
+
+func (s *echoCountingSummarizer) Summarize(
+	ctx context.Context,
+	input summarizer.Input,
+) (string, error) {
+	s.mu.Lock()
+	s.calls++
+	s.mu.Unlock()
+
+	return input.Text, nil
+}
+
+func (s *echoCountingSummarizer) callCount() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.calls
+}
+
 func TestTelegramSummaryCacheKey(t *testing.T) {
 	keyA := telegramSummaryCacheKey(
 		" https://t.me/example/123?single=1 ",
@@ -138,5 +161,60 @@ func TestFeedParserSummarizeTelegramPostEditedTextBypassesCache(t *testing.T) {
 
 	if got := stub.callCount(); got != 2 {
 		t.Fatalf("expected cache hit for edited summary, calls %d", got)
+	}
+}
+
+func TestFeedParserSummarizeTelegramPostsPreservesOrder(t *testing.T) {
+	echo := &echoCountingSummarizer{}
+	parser := NewFeedParser(nil, echo)
+
+	candidates := []telegramSummarizationCandidate{
+		{
+			postIndex: 2,
+			item:      channelItem{URL: "https://t.me/example/3", Text: "third"},
+		},
+		{
+			postIndex: 0,
+			item:      channelItem{URL: "https://t.me/example/1", Text: "first"},
+		},
+		{
+			postIndex: 1,
+			item:      channelItem{URL: "https://t.me/example/2", Text: "second"},
+		},
+	}
+
+	ctx := context.Background()
+	summaries := parser.summarizeTelegramPosts(ctx, candidates)
+
+	if got := echo.callCount(); got != len(candidates) {
+		t.Fatalf(
+			"expected summarizer to be called %d times, got %d",
+			len(candidates),
+			got,
+		)
+	}
+
+	maxIndex := 0
+	for _, candidate := range candidates {
+		if candidate.postIndex > maxIndex {
+			maxIndex = candidate.postIndex
+		}
+	}
+
+	titles := make([]string, maxIndex+1)
+	for i := range candidates {
+		titles[candidates[i].postIndex] = summaries[i]
+	}
+
+	want := []string{"first", "second", "third"}
+	for i := range want {
+		if titles[i] != want[i] {
+			t.Fatalf(
+				"unexpected title at index %d: got %q want %q",
+				i,
+				titles[i],
+				want[i],
+			)
+		}
 	}
 }
