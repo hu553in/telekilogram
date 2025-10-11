@@ -24,21 +24,23 @@ func (b *Bot) handleMessage(message *tgbotapi.Message) error {
 			)
 		}
 
+		text := strings.TrimSpace(message.Text)
+
 		switch {
-		case strings.HasPrefix(message.Text, "/start"):
-			return b.handleStartCommand(message.Text, message.Chat.ID, message.From.ID)
-		case strings.HasPrefix(message.Text, "/menu"):
+		case strings.HasPrefix(text, "/start"):
+			return b.handleStartCommand(text, message.Chat.ID, message.From.ID)
+		case strings.HasPrefix(text, "/menu"):
 			return b.handleMenuCommand(message.Chat.ID)
-		case strings.HasPrefix(message.Text, "/list"):
+		case strings.HasPrefix(text, "/list"):
 			return b.handleListCommand(message.Chat.ID, message.From.ID)
-		case strings.HasPrefix(message.Text, "/digest"):
+		case strings.HasPrefix(text, "/digest"):
 			return b.handleDigestCommand(message.Chat.ID, message.From.ID)
-		case strings.HasPrefix(message.Text, "/filter"):
+		case strings.HasPrefix(text, "/filter"):
 			return b.sendMessageWithKeyboard(message.Chat.ID, filterText, menuKeyboard)
-		case strings.HasPrefix(message.Text, "/settings"):
+		case strings.HasPrefix(text, "/settings"):
 			return b.handleSettingsCommand(message.Chat.ID, message.From.ID)
 		default:
-			return b.handleRandomText(message.Text, message.From.ID, message)
+			return b.handleRandomText(text, message.From.ID, message)
 		}
 	})
 }
@@ -48,6 +50,8 @@ func (b *Bot) handleRandomText(
 	userID int64,
 	message *tgbotapi.Message,
 ) error {
+	text = strings.TrimSpace(text)
+
 	feeds, err := feed.FindValidFeeds(text)
 
 	if len(feeds) == 0 {
@@ -131,10 +135,23 @@ func (b *Bot) handleForwardedChannel(
 	chatID int64,
 	userID int64,
 ) error {
-	slug := chat.UserName
-	canonicalURL := feed.TelegramChannelCanonicalURL(slug)
+	slug := strings.TrimSpace(chat.UserName)
 
-	title := chat.Title
+	canonicalURL := feed.TelegramChannelCanonicalURL(slug)
+	if canonicalURL == "" {
+		slog.Warn("Empty canonical URL for forwarded channel",
+			slog.String("slug", slug),
+			slog.Int64("chatID", chatID),
+			slog.Int64("userID", userID))
+
+		return b.sendMessageWithKeyboard(
+			chatID,
+			"❌ Failed\\.",
+			returnKeyboard,
+		)
+	}
+
+	title := strings.TrimSpace(chat.Title)
 	if title == "" {
 		slog.Warn("Empty Telegram channel title",
 			slog.Any("canonicalURL", canonicalURL),

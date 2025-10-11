@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
@@ -27,6 +28,8 @@ func New(
 	fetcher *feed.FeedFetcher,
 	allowedUsers []int64,
 ) (*Bot, error) {
+	token = strings.TrimSpace(token)
+
 	api, err := tgbotapi.NewBotAPI(token)
 	if err != nil {
 		return nil, err

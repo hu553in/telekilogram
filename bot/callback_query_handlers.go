@@ -12,7 +12,9 @@ import (
 
 func (b *Bot) handleCallbackQuery(callback *tgbotapi.CallbackQuery) error {
 	return b.withSpinner(callback.Message.Chat.ID, func() error {
-		switch callback.Data {
+		data := strings.TrimSpace(callback.Data)
+
+		switch data {
 		case "menu":
 			return b.withEmptyCallbackAnswer(callback, func() error {
 				return b.handleMenuCommand(callback.Message.Chat.ID)
@@ -32,7 +34,7 @@ func (b *Bot) handleCallbackQuery(callback *tgbotapi.CallbackQuery) error {
 		}
 
 		if hourUTCStr, ok := strings.CutPrefix(
-			callback.Data,
+			data,
 			"settings_auto_digest_hour_utc_",
 		); ok {
 			return b.handleSettingsAutoDigestHourUTCQuery(hourUTCStr, callback)
@@ -46,6 +48,8 @@ func (b *Bot) handleSettingsAutoDigestHourUTCQuery(
 	hourUTCStr string,
 	callback *tgbotapi.CallbackQuery,
 ) error {
+	hourUTCStr = strings.TrimSpace(hourUTCStr)
+
 	hourUTC, err := strconv.ParseInt(hourUTCStr, 10, 64)
 	if err != nil {
 		return b.errorCallbackAnswer(

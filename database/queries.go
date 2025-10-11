@@ -3,6 +3,7 @@ package database
 import (
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"telekilogram/models"
 )
@@ -12,6 +13,16 @@ func (d *Database) AddFeed(
 	feedURL string,
 	feedTitle string,
 ) error {
+	feedURL = strings.TrimSpace(feedURL)
+	if feedURL == "" {
+		return fmt.Errorf("feed URL is empty")
+	}
+
+	feedTitle = strings.TrimSpace(feedTitle)
+	if feedTitle == "" {
+		feedTitle = feedURL
+	}
+
 	query := "insert or ignore into feeds (user_id, url, title) values (?, ?, ?)"
 
 	_, err := d.db.Exec(query, userID, feedURL, feedTitle)
@@ -20,6 +31,11 @@ func (d *Database) AddFeed(
 }
 
 func (d *Database) UpdateFeedTitle(feedID int64, feedTitle string) error {
+	feedTitle = strings.TrimSpace(feedTitle)
+	if feedTitle == "" {
+		return fmt.Errorf("feed title is empty")
+	}
+
 	query := "update feeds set title = ? where id = ?"
 
 	_, err := d.db.Exec(query, feedTitle, feedID)
@@ -57,6 +73,9 @@ func (d *Database) GetUserFeeds(userID int64) ([]models.UserFeed, error) {
 		if err := rows.Scan(&f.ID, &f.URL, &f.Title); err != nil {
 			return nil, fmt.Errorf("failed to scan row: %w", err)
 		}
+
+		f.URL = strings.TrimSpace(f.URL)
+		f.Title = strings.TrimSpace(f.Title)
 
 		f.UserID = userID
 		feeds = append(feeds, f)
@@ -102,6 +121,9 @@ func (d *Database) GetHourFeeds(hourUTC int64) ([]models.UserFeed, error) {
 		if err := rows.Scan(&f.ID, &f.UserID, &f.URL, &f.Title); err != nil {
 			return nil, fmt.Errorf("failed to scan row: %w", err)
 		}
+
+		f.URL = strings.TrimSpace(f.URL)
+		f.Title = strings.TrimSpace(f.Title)
 
 		feeds = append(feeds, f)
 	}

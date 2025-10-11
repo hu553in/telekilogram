@@ -23,13 +23,15 @@ type feedGroupKey struct {
 }
 
 func FindValidFeeds(text string) ([]models.Feed, error) {
+	text = strings.TrimSpace(text)
+
 	var slugs []string
 	for _, m := range telegramAtSignSlugRe.FindAllStringSubmatch(text, -1) {
 		if len(m) < 3 {
 			continue
 		}
 
-		slug := m[2]
+		slug := strings.TrimSpace(m[2])
 		if !telegramSlugRe.MatchString(slug) {
 			continue
 		}
@@ -49,6 +51,8 @@ func FindValidFeeds(text string) ([]models.Feed, error) {
 	var errs []error
 
 	for _, u := range URLs {
+		u := strings.TrimSpace(u)
+
 		feed, err := validateFeed(u)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to validate feed: %w", err))
@@ -105,22 +109,47 @@ func FormatPostsAsMessages(posts []models.Post) []string {
 	feedGroups := make(map[feedGroupKey][]models.Post)
 
 	for _, post := range posts {
-		feedTitle := post.FeedTitle
+		feedTitle := strings.TrimSpace(post.FeedTitle)
+		feedURL := strings.TrimSpace(post.FeedURL)
+		postTitle := strings.TrimSpace(post.Title)
+		postURL := strings.TrimSpace(post.URL)
+
+		if feedURL == "" && postURL != "" {
+			feedURL = postURL
+		} else if postURL == "" && feedURL != "" {
+			postURL = feedURL
+		} else if postURL == "" && feedURL == "" {
+			slog.Warn("Skipping post with empty URLs",
+				slog.Int64("feedID", post.FeedID),
+				slog.String("title", postTitle))
+
+			continue
+		}
+
 		if feedTitle == "" {
 			slog.Warn("Empty feed title",
 				slog.Int64("feedID", post.FeedID),
-				slog.String("feedURL", post.FeedURL),
-				slog.String("postURL", post.URL))
+				slog.String("feedURL", feedURL),
+				slog.String("postURL", postURL))
 
-			feedTitle = post.FeedURL
+			feedTitle = feedURL
+			if feedTitle == "" {
+				feedTitle = postURL
+			}
 		}
+
+		normalized := post
+		normalized.Title = postTitle
+		normalized.URL = postURL
+		normalized.FeedTitle = feedTitle
+		normalized.FeedURL = feedURL
 
 		key := feedGroupKey{
 			FeedID:    post.FeedID,
 			FeedTitle: feedTitle,
-			FeedURL:   post.FeedURL,
+			FeedURL:   feedURL,
 		}
-		feedGroups[key] = append(feedGroups[key], post)
+		feedGroups[key] = append(feedGroups[key], normalized)
 	}
 
 	feedGroupKeySeq := maps.Keys(feedGroups)
@@ -184,10 +213,20 @@ func FormatPostsAsMessages(posts []models.Post) []string {
 }
 
 func TelegramChannelCanonicalURL(slug string) string {
+	slug = strings.TrimSpace(slug)
+	if slug == "" {
+		return ""
+	}
+
 	return fmt.Sprintf("https://%s/s/%s", TelegramHost, slug)
 }
 
 func validateFeed(feedURL string) (*models.Feed, error) {
+	feedURL = strings.TrimSpace(feedURL)
+	if feedURL == "" {
+		return nil, fmt.Errorf("feed URL is empty")
+	}
+
 	if _, err := url.Parse(feedURL); err != nil {
 		return nil, fmt.Errorf("failed to parse URL: %w", err)
 	}
@@ -202,7 +241,11 @@ func validateFeed(feedURL string) (*models.Feed, error) {
 		}
 
 		canonicalURL := TelegramChannelCanonicalURL(slug)
+		if canonicalURL == "" {
+			return nil, fmt.Errorf("failed to build canonical URL for slug %q", slug)
+		}
 
+		title = strings.TrimSpace(title)
 		if title == "" {
 			slog.Warn("Empty Telegram channel title",
 				slog.Any("canonicalURL", canonicalURL),
@@ -226,7 +269,7 @@ func validateFeed(feedURL string) (*models.Feed, error) {
 		)
 	}
 
-	title := parsed.Title
+	title := strings.TrimSpace(parsed.Title)
 	if title == "" {
 		slog.Warn("Empty feed title",
 			slog.String("feedURL", feedURL),

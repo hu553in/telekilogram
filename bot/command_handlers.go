@@ -15,8 +15,10 @@ func (b *Bot) handleStartCommand(
 	chatID int64,
 	userID int64,
 ) error {
+	text = strings.TrimSpace(text)
+
 	if feedIDStr, ok := strings.CutPrefix(text, "/start unfollow_"); ok {
-		return b.handleUnfollowDeepLink(feedIDStr, chatID, userID)
+		return b.handleUnfollowDeepLink(strings.TrimSpace(feedIDStr), chatID, userID)
 	}
 
 	return b.sendMessageWithKeyboard(chatID, welcomeText, menuKeyboard)
@@ -27,6 +29,8 @@ func (b *Bot) handleUnfollowDeepLink(
 	chatID int64,
 	userID int64,
 ) error {
+	feedIDStr = strings.TrimSpace(feedIDStr)
+
 	feedID, err := strconv.ParseInt(feedIDStr, 10, 64)
 	if err != nil {
 		errs := []error{
@@ -117,12 +121,22 @@ func (b *Bot) handleListCommand(chatID int64, userID int64) error {
 	}
 
 	for i, f := range feeds {
+		url := strings.TrimSpace(f.URL)
+		if url == "" {
+			continue
+		}
+
+		title := strings.TrimSpace(f.Title)
+		if title == "" {
+			title = url
+		}
+
 		if botInfoErr == nil {
 			message.WriteString(fmt.Sprintf(
 				"%d\\. [%s](%s) \\[[unfollow](https://t\\.me/%s?start=unfollow_%d)\\]\n",
 				i+1,
-				markdown.EscapeV2(f.Title),
-				f.URL,
+				markdown.EscapeV2(title),
+				url,
 				botInfo.UserName,
 				f.ID,
 			))
@@ -130,8 +144,8 @@ func (b *Bot) handleListCommand(chatID int64, userID int64) error {
 			message.WriteString(fmt.Sprintf(
 				"%d\\. [%s](%s)\n",
 				i+1,
-				markdown.EscapeV2(f.Title),
-				f.URL,
+				markdown.EscapeV2(title),
+				url,
 			))
 		}
 	}

@@ -36,7 +36,7 @@ func main() {
 	slog.Info(".env file is loaded",
 		slog.String("path", envFile))
 
-	token := os.Getenv("TOKEN")
+	token := strings.TrimSpace(os.Getenv("TOKEN"))
 	if token == "" {
 		slog.Error("TOKEN is required",
 			slog.String("envVar", "TOKEN"))
@@ -69,8 +69,8 @@ func main() {
 	slog.Info("DB is initialized",
 		slog.String("dbPath", dbPath))
 
-	allowedUsersRaw := os.Getenv("ALLOWED_USERS")
-	allowedUsersStr := strings.Split(allowedUsersRaw, ",")
+	allowedUsersTrimmed := strings.TrimSpace(os.Getenv("ALLOWED_USERS"))
+	allowedUsersStr := strings.Split(allowedUsersTrimmed, ",")
 	var allowedUsers []int64
 
 	for _, userIDStr := range allowedUsersStr {
@@ -83,7 +83,7 @@ func main() {
 		if err != nil {
 			slog.Error(
 				"ALLOWED_USERS must be empty or comma-separated int64 list",
-				slog.String("ALLOWED_USERS", allowedUsersRaw),
+				slog.String("ALLOWED_USERS", allowedUsersTrimmed),
 				slog.String("value", userIDStr),
 			)
 

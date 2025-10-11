@@ -23,7 +23,8 @@ const (
 	Remove fillers/emojis/hashtags/links unless essential.
 	Stay neutral and objective.
 	The output must be in one line of a single mid-length sentence,
-	in the same language as the input.
+	in the same language as the input
+	(you must check input language by reading the entire text, not first words).
 	Max sentence length is 1000 characters (but try to keep it much shorter).`
 )
 
@@ -61,9 +62,9 @@ func (s *OpenAISummarizer) Summarize(
 	}
 
 	promptBuilder := strings.Builder{}
-	if input.SourceURL != "" {
+	if sourceURL := strings.TrimSpace(input.SourceURL); sourceURL != "" {
 		promptBuilder.WriteString("Source: ")
-		promptBuilder.WriteString(input.SourceURL)
+		promptBuilder.WriteString(sourceURL)
 		promptBuilder.WriteString("\n")
 	}
 	promptBuilder.WriteString("Content:\n")

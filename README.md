@@ -32,12 +32,15 @@ Feed assistant Telegram bot written in Go.
 
 ## Environment variables
 
-| Name             | Required | Default | Description                                                                                                                                                         |
-| ---------------- | -------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `TOKEN`          | Yes      | –       | Telegram bot token obtained from BotFather.                                                                                                                         |
-| `DB_PATH`        | No       | `./db`  | Filesystem location of the SQLite database. Creates the directory on first run if it does not exist.                                                                |
-| `ALLOWED_USERS`  | No       | –       | Comma-separated list of Telegram user IDs allowed to interact with the bot. Each entry must be a valid 64-bit integer; startup fails if any value cannot be parsed. |
-| `OPENAI_API_KEY` | No       | –       | Enables OpenAI-backed summaries for Telegram channel posts. Leave unset to fall back to local truncation.                                                           |
+| Name             | Required | Default | Description                                                                                                                                                                                                 |
+| ---------------- | -------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TOKEN`          | Yes      | –       | Telegram bot token obtained from BotFather.                                                                                                                                                                 |
+| `DB_PATH`        | No       | `./db`  | Filesystem location of the SQLite database. Creates the directory on first run if it does not exist.                                                                                                        |
+| `ALLOWED_USERS`  | No       | –       | Comma-separated list of Telegram user IDs allowed to interact with the bot. Leading/trailing whitespace is ignored. Each entry must be a valid 64-bit integer; startup fails if any value cannot be parsed. |
+| `OPENAI_API_KEY` | No       | –       | Enables OpenAI-backed summaries for Telegram channel posts. Leave unset to fall back to local truncation.                                                                                                   |
+
+**Note:** Environment values are trimmed for leading/trailing whitespace before use,
+so pasting secrets with extra spaces will not break startup.
 
 ## Roadmap
 
@@ -61,9 +64,10 @@ Feed assistant Telegram bot written in Go.
 - [x] Cache AI summaries of Telegram channel posts
 - [x] Parallelise AI summarization of Telegram channel posts
 - [x] Check if logs can be enriched with some useful contextual info
+- [x] Trim whitespaces in any significant places
 - [ ] Understand if it is needed to implement graceful shutdown, etc.
-- [ ] Trim whitespaces in any significant places
 - [ ] Fully protect Telegram max message length in feed list and digest
+- [ ] Check if it's needed to introduce more detailed errors for users
 - [ ] Add tests (at least for critical functionality)
 - [ ] Add paid subscription (with free tier)
 - [ ] Create mini app

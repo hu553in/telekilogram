@@ -37,6 +37,7 @@ func TelegramMessageCanonicalURL(raw string) string {
 }
 
 func isTelegramChannelURL(raw string) (bool, string) {
+	raw = strings.TrimSpace(raw)
 	u, err := url.Parse(raw)
 	if err != nil {
 		return false, ""
@@ -68,6 +69,8 @@ func isTelegramChannelURL(raw string) (bool, string) {
 		slug = parts[0]
 	}
 
+	slug = strings.TrimSpace(slug)
+
 	if !telegramSlugRe.MatchString(slug) {
 		return false, ""
 	}
@@ -77,6 +80,9 @@ func isTelegramChannelURL(raw string) (bool, string) {
 
 func fetchTelegramChannelTitle(slug string) (string, error) {
 	canonicalURL := TelegramChannelCanonicalURL(slug)
+	if canonicalURL == "" {
+		return "", fmt.Errorf("slug is empty")
+	}
 
 	req, err := http.NewRequest(http.MethodGet, canonicalURL, nil)
 	if err != nil {
@@ -122,6 +128,9 @@ func fetchTelegramChannelTitle(slug string) (string, error) {
 
 func fetchTelegramChannelPosts(slug string) ([]channelItem, string, error) {
 	canonicalURL := TelegramChannelCanonicalURL(slug)
+	if canonicalURL == "" {
+		return nil, "", fmt.Errorf("slug is empty")
+	}
 
 	req, err := http.NewRequest(http.MethodGet, canonicalURL, nil)
 	if err != nil {

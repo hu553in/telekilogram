@@ -43,7 +43,10 @@ func (fp *FeedParser) ParseFeed(
 	ctx context.Context,
 	feed *models.UserFeed,
 ) ([]models.Post, error) {
-	if ok, slug := isTelegramChannelURL(feed.URL); ok {
+	normalizedFeedURL := strings.TrimSpace(feed.URL)
+	normalizedFeedTitle := strings.TrimSpace(feed.Title)
+
+	if ok, slug := isTelegramChannelURL(normalizedFeedURL); ok {
 		items, channelTitle, err := fetchTelegramChannelPosts(slug)
 		if err != nil {
 			return nil, fmt.Errorf(
@@ -52,13 +55,17 @@ func (fp *FeedParser) ParseFeed(
 			)
 		}
 
+		channelTitle = strings.TrimSpace(channelTitle)
+
 		var updateTitleErr error
-		if channelTitle != "" && channelTitle != feed.Title {
+		if channelTitle != "" && channelTitle != normalizedFeedTitle {
 			if err := fp.db.UpdateFeedTitle(feed.ID, channelTitle); err != nil {
 				updateTitleErr = fmt.Errorf(
 					"failed to update feed title: %w",
 					err,
 				)
+			} else {
+				normalizedFeedTitle = channelTitle
 			}
 		}
 
@@ -69,14 +76,18 @@ func (fp *FeedParser) ParseFeed(
 			candidates   []telegramSummarizationCandidate
 			canonicalURL = TelegramChannelCanonicalURL(slug)
 		)
+		if canonicalURL == "" {
+			return nil, fmt.Errorf("failed to build canonical URL for slug %q", slug)
+		}
 
 		feedTitle := channelTitle
 		if feedTitle == "" {
-			feedTitle = feed.Title
+			feedTitle = normalizedFeedTitle
 		}
 		if feedTitle == "" {
 			feedTitle = canonicalURL
 		}
+		feedTitle = strings.TrimSpace(feedTitle)
 
 		for _, it := range items {
 			publishedTime := it.published
@@ -86,9 +97,18 @@ func (fp *FeedParser) ParseFeed(
 			}
 
 			if publishedTime.After(cutoffTime) {
+				postURL := strings.TrimSpace(it.URL)
+				if postURL == "" {
+					slog.Warn("Skipping Telegram post with empty URL",
+						slog.String("canonicalFeedURL", canonicalURL),
+						slog.String("slug", slug))
+
+					continue
+				}
+
 				postIndex := len(newPosts)
 				newPosts = append(newPosts, models.Post{
-					URL:       it.URL,
+					URL:       postURL,
 					FeedID:    feed.ID,
 					FeedTitle: feedTitle,
 					FeedURL:   canonicalURL,
@@ -106,7 +126,7 @@ func (fp *FeedParser) ParseFeed(
 			for i := range candidates {
 				candidate := candidates[i]
 				if candidate.postIndex >= 0 && candidate.postIndex < len(newPosts) {
-					newPosts[candidate.postIndex].Title = summaries[i]
+					newPosts[candidate.postIndex].Title = strings.TrimSpace(summaries[i])
 				}
 			}
 		}
@@ -114,19 +134,23 @@ func (fp *FeedParser) ParseFeed(
 		return newPosts, updateTitleErr
 	}
 
-	parsed, err := libParser.ParseURL(feed.URL)
+	parsed, err := libParser.ParseURL(normalizedFeedURL)
 	if err != nil {
 		return nil, fmt.Errorf(
 			"failed to parse feed by URL %q: %w",
-			feed.URL,
+			normalizedFeedURL,
 			err,
 		)
 	}
 
+	parsedTitle := strings.TrimSpace(parsed.Title)
+
 	var updateTitleErr error
-	if parsed.Title != feed.Title {
-		if err := fp.db.UpdateFeedTitle(feed.ID, parsed.Title); err != nil {
+	if parsedTitle != "" && parsedTitle != normalizedFeedTitle {
+		if err := fp.db.UpdateFeedTitle(feed.ID, parsedTitle); err != nil {
 			updateTitleErr = fmt.Errorf("failed to update feed title: %w", err)
+		} else {
+			normalizedFeedTitle = parsedTitle
 		}
 	}
 
@@ -144,12 +168,31 @@ func (fp *FeedParser) ParseFeed(
 		}
 
 		if publishedTime.After(cutoffTime) {
+			postTitle := strings.TrimSpace(item.Title)
+			postURL := strings.TrimSpace(item.Link)
+			feedTitle := normalizedFeedTitle
+			if feedTitle == "" {
+				feedTitle = parsedTitle
+			}
+			if feedTitle == "" {
+				feedTitle = normalizedFeedURL
+			}
+
+			if postURL == "" {
+				slog.Warn("Skipping feed item with empty URL",
+					slog.String("feedURL", normalizedFeedURL),
+					slog.String("feedTitle", feedTitle),
+					slog.String("itemTitle", postTitle))
+
+				continue
+			}
+
 			newPosts = append(newPosts, models.Post{
-				Title:     item.Title,
-				URL:       item.Link,
+				Title:     postTitle,
+				URL:       postURL,
 				FeedID:    feed.ID,
-				FeedTitle: parsed.Title,
-				FeedURL:   feed.URL,
+				FeedTitle: feedTitle,
+				FeedURL:   normalizedFeedURL,
 			})
 		}
 	}

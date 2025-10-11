@@ -26,3 +26,17 @@ func TestTelegramMessageCanonicalURLTrimsWhitespace(t *testing.T) {
 		t.Fatalf("expected trimmed URL, got %q", got)
 	}
 }
+
+func TestTelegramChannelCanonicalURLTrimsSlug(t *testing.T) {
+	got := TelegramChannelCanonicalURL("  example  ")
+	want := "https://t.me/s/example"
+	if got != want {
+		t.Fatalf("expected trimmed slug, got %q", got)
+	}
+}
+
+func TestTelegramChannelCanonicalURLEmptySlug(t *testing.T) {
+	if got := TelegramChannelCanonicalURL("   "); got != "" {
+		t.Fatalf("expected empty slug to return empty URL, got %q", got)
+	}
+}
