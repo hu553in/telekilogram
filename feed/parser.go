@@ -234,7 +234,10 @@ func (fp *FeedParser) summarizeTelegramPost(
 	if err != nil {
 		slog.Error("Failed to summarize Telegram channel post",
 			slog.Any("err", err),
-			slog.String("url", item.URL))
+			slog.String("url", item.URL),
+			slog.Bool("fallback", true),
+			slog.String("cacheKey", cacheKey),
+			slog.Int("textLen", len(text)))
 
 		return fallbackTelegramSummary(text, item.URL)
 	}

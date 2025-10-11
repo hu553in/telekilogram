@@ -93,7 +93,9 @@ func fetchTelegramChannelTitle(slug string) (string, error) {
 		if err := resp.Body.Close(); err != nil {
 			slog.Error("Failed to close response body",
 				slog.Any("err", err),
-				slog.String("canonicalURL", canonicalURL))
+				slog.String("canonicalURL", canonicalURL),
+				slog.String("operation", "fetchTelegramChannelTitle"),
+				slog.String("slug", slug))
 		}
 	}()
 
@@ -136,7 +138,9 @@ func fetchTelegramChannelPosts(slug string) ([]channelItem, string, error) {
 		if err := resp.Body.Close(); err != nil {
 			slog.Error("Failed to close response body",
 				slog.Any("err", err),
-				slog.String("canonicalURL", canonicalURL))
+				slog.String("canonicalURL", canonicalURL),
+				slog.String("operation", "fetchTelegramChannelPosts"),
+				slog.String("slug", slug))
 		}
 	}()
 

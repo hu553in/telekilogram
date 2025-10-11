@@ -8,7 +8,12 @@ import (
 
 	"telekilogram/bot"
 	"telekilogram/feed"
+	"telekilogram/models"
 )
+
+const HourlyDigestSpec = "0 * * * *"
+
+var CronLocation = time.UTC
 
 type Scheduler struct {
 	cron    *cron.Cron
@@ -17,7 +22,7 @@ type Scheduler struct {
 }
 
 func New(bot *bot.Bot, fetcher *feed.FeedFetcher) *Scheduler {
-	c := cron.New(cron.WithLocation(time.UTC))
+	c := cron.New(cron.WithLocation(CronLocation))
 
 	return &Scheduler{
 		cron:    c,
@@ -27,7 +32,7 @@ func New(bot *bot.Bot, fetcher *feed.FeedFetcher) *Scheduler {
 }
 
 func (s *Scheduler) Start() error {
-	if _, err := s.cron.AddFunc("0 * * * *", s.checkHourFeeds); err != nil {
+	if _, err := s.cron.AddFunc(HourlyDigestSpec, s.checkHourFeeds); err != nil {
 		return err
 	}
 
@@ -47,7 +52,8 @@ func (s *Scheduler) checkHourFeeds() {
 	if err != nil {
 		slog.Error("Failed to fetch hour feeds",
 			slog.Any("err", err),
-			slog.Int64("hourUTC", hourUTC))
+			slog.Int64("hourUTC", hourUTC),
+			slog.Int("usersWithPosts", len(userPosts)))
 	}
 
 	for userID, posts := range userPosts {
@@ -56,7 +62,24 @@ func (s *Scheduler) checkHourFeeds() {
 				slog.Any("err", err),
 				slog.Int64("hourUTC", hourUTC),
 				slog.Int64("userID", userID),
-				slog.Any("posts", posts))
+				slog.Int("postCount", len(posts)),
+				slog.Any("feedIDs", feedIDs(posts)))
 		}
 	}
+}
+
+func feedIDs(posts []models.Post) []int64 {
+	seen := make(map[int64]struct{})
+	var ids []int64
+
+	for _, post := range posts {
+		if _, ok := seen[post.FeedID]; ok {
+			continue
+		}
+
+		seen[post.FeedID] = struct{}{}
+		ids = append(ids, post.FeedID)
+	}
+
+	return ids
 }

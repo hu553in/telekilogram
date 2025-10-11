@@ -45,38 +45,81 @@ func New(
 
 func (b *Bot) Start() {
 	updateConfig := tgbotapi.NewUpdate(0)
-	updateConfig.Timeout = updateTimeout
+	updateConfig.Timeout = UpdateTimeout
 
 	updates := b.api.GetUpdatesChan(updateConfig)
 
 	for update := range updates {
 		switch {
 		case update.Message != nil:
+			chatID, chatType := chatContext(update.Message.Chat)
+
+			userID := update.Message.From.ID
 			if !b.userAllowed(update.Message.From.ID) {
 				slog.Debug("User is not allowed",
-					slog.Int64("userID", update.Message.From.ID))
+					slog.Int64("userID", userID),
+					slog.Int64("chatID", chatID),
+					slog.String("username", update.Message.From.UserName),
+					slog.String("chatType", chatType))
 
 				return
 			}
+
 			if err := b.handleMessage(update.Message); err != nil {
 				slog.Error("Failed to handle message",
 					slog.Any("err", err),
-					slog.Any("update", update))
+					slog.Int64("chatID", chatID),
+					slog.Int64("userID", userID),
+					slog.String("chatType", chatType),
+					slog.Int("messageID", update.Message.MessageID))
 			}
 		case update.CallbackQuery != nil:
+			chatID := callbackChatID(update.CallbackQuery)
+
 			if !b.userAllowed(update.CallbackQuery.From.ID) {
 				slog.Debug("User is not allowed",
-					slog.Int64("userID", update.CallbackQuery.From.ID))
+					slog.Int64("userID", update.CallbackQuery.From.ID),
+					slog.Int64("chatID", chatID),
+					slog.String("username", update.CallbackQuery.From.UserName),
+					slog.String("data", update.CallbackQuery.Data))
 
 				return
 			}
+
 			if err := b.handleCallbackQuery(update.CallbackQuery); err != nil {
 				slog.Error("Failed to handle callback query",
 					slog.Any("err", err),
-					slog.Any("update", update))
+					slog.Int64("chatID", chatID),
+					slog.Int64("userID", update.CallbackQuery.From.ID),
+					slog.String("data", update.CallbackQuery.Data),
+					slog.Int("messageID", callbackMessageID(update.CallbackQuery)))
 			}
 		}
 	}
+}
+
+func chatContext(chat *tgbotapi.Chat) (int64, string) {
+	if chat == nil {
+		return 0, ""
+	}
+
+	return chat.ID, chat.Type
+}
+
+func callbackChatID(cb *tgbotapi.CallbackQuery) int64 {
+	if cb != nil && cb.Message != nil && cb.Message.Chat != nil {
+		return cb.Message.Chat.ID
+	}
+
+	return 0
+}
+
+func callbackMessageID(cb *tgbotapi.CallbackQuery) int {
+	if cb != nil && cb.Message != nil {
+		return cb.Message.MessageID
+	}
+
+	return 0
 }
 
 func (b *Bot) SendNewPosts(chatID int64, posts []models.Post) error {

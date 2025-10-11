@@ -108,7 +108,9 @@ func FormatPostsAsMessages(posts []models.Post) []string {
 		feedTitle := post.FeedTitle
 		if feedTitle == "" {
 			slog.Warn("Empty feed title",
-				slog.Any("post", post))
+				slog.Int64("feedID", post.FeedID),
+				slog.String("feedURL", post.FeedURL),
+				slog.String("postURL", post.URL))
 
 			feedTitle = post.FeedURL
 		}
@@ -203,7 +205,8 @@ func validateFeed(feedURL string) (*models.Feed, error) {
 
 		if title == "" {
 			slog.Warn("Empty Telegram channel title",
-				slog.Any("canonicalURL", canonicalURL))
+				slog.Any("canonicalURL", canonicalURL),
+				slog.String("slug", slug))
 
 			title = canonicalURL
 		}
@@ -226,7 +229,8 @@ func validateFeed(feedURL string) (*models.Feed, error) {
 	title := parsed.Title
 	if title == "" {
 		slog.Warn("Empty feed title",
-			slog.Any("feedURL", feedURL))
+			slog.String("feedURL", feedURL),
+			slog.String("fallbackTitle", feedURL))
 
 		title = feedURL
 	}

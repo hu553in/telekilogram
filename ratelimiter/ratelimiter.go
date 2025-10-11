@@ -2,6 +2,7 @@ package ratelimiter
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"sync"
 	"time"
@@ -102,9 +103,12 @@ func (rl *RateLimiter) handleRequest(req request) {
 		delay := getDelay(chatID, lastSent)
 
 		if delay > 0 {
+			messageType := fmt.Sprintf("%T", req.message)
 			slog.Debug("Rate limiting message",
 				slog.Int64("chatID", chatID),
-				slog.Duration("delay", delay))
+				slog.Duration("delay", delay),
+				slog.String("chattableType", messageType),
+				slog.Int("queueLen", len(rl.queue)))
 
 			select {
 			case <-time.After(delay):

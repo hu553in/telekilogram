@@ -137,7 +137,8 @@ func (b *Bot) handleForwardedChannel(
 	title := chat.Title
 	if title == "" {
 		slog.Warn("Empty Telegram channel title",
-			slog.Any("canonicalURL", canonicalURL))
+			slog.Any("canonicalURL", canonicalURL),
+			slog.String("slug", slug))
 
 		title = canonicalURL
 	}

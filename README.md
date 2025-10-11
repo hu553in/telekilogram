@@ -60,7 +60,7 @@ Feed assistant Telegram bot written in Go.
 - [x] Add AI summaries of Telegram channel posts
 - [x] Cache AI summaries of Telegram channel posts
 - [x] Parallelise AI summarization of Telegram channel posts
-- [ ] Check if logs can be enriched with some useful contextual info
+- [x] Check if logs can be enriched with some useful contextual info
 - [ ] Understand if it is needed to implement graceful shutdown, etc.
 - [ ] Trim whitespaces in any significant places
 - [ ] Fully protect Telegram max message length in feed list and digest

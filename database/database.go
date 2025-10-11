@@ -48,14 +48,34 @@ func New(dbPath string) (*Database, error) {
 		return nil, fmt.Errorf("failed to create migrate instance: %w", err)
 	}
 
-	if err := m.Up(); err != nil {
-		if !errors.Is(err, migrate.ErrNoChange) {
-			return nil, fmt.Errorf("failed to apply migrations: %w", err)
-		}
-		slog.Info("No migrations to apply")
+	migrateErr := m.Up()
+
+	version, dirty, versionErr := m.Version()
+	fields := []any{
+		slog.String("dbPath", dbPath),
 	}
 
-	slog.Info("DB is migrated")
+	if versionErr == nil {
+		fields = append(
+			fields,
+			slog.Uint64("version", uint64(version)),
+			slog.Bool("dirty", dirty),
+		)
+	} else if !errors.Is(versionErr, migrate.ErrNilVersion) {
+		slog.Warn("Failed to fetch migration version",
+			slog.Any("err", versionErr),
+			slog.String("dbPath", dbPath))
+	}
+
+	if migrateErr != nil {
+		if !errors.Is(migrateErr, migrate.ErrNoChange) {
+			return nil, fmt.Errorf("failed to apply migrations: %w", migrateErr)
+		}
+
+		slog.Info("No migrations to apply", fields...)
+	} else {
+		slog.Info("DB is migrated", fields...)
+	}
 
 	return &Database{db: dbFile}, nil
 }

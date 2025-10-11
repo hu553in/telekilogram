@@ -2,7 +2,7 @@ package bot
 
 import tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
-const updateTimeout = 60
+const UpdateTimeout = 60
 
 const welcomeText = `🤖 *Welcome to Telekilogram\!*
 
