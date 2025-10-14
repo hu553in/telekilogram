@@ -65,11 +65,11 @@ so pasting secrets with extra spaces will not break startup.
 - [x] Parallelise AI summarization of Telegram channel posts
 - [x] Check if logs can be enriched with some useful contextual info
 - [x] Trim whitespaces in any significant places
-- [ ] Understand if it is needed to implement graceful shutdown, etc.
-- [ ] Fully protect Telegram max message length in feed list and digest
+- [ ] Add graceful shutdown
+- [ ] Fully protect Telegram max message length everywhere
 - [ ] Check if it's needed to introduce more detailed errors for users
 - [ ] Add tests (at least for critical functionality)
-- [ ] Add paid subscription (with free tier)
-- [ ] Create mini app
+- [ ] Create mini app (optional)
+- [ ] Add paid subscription (with free tier) (optional)
 - [ ] Deploy using Docker instead of `systemd` service (optional)
 - [ ] Migrate to https://github.com/go-telegram/bot (optional)
