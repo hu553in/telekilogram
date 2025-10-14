@@ -15,9 +15,10 @@ Feed assistant Telegram bot written in Go.
 - Summarize Telegram channel posts with OpenAI (falls back to local truncation
   when `OPENAI_API_KEY` is not provided) and cache each summary for 24h to avoid
   reprocessing the same post across users
+- Invalidate cached AI summaries for edited Telegram channel posts
 - Message format:
   - RSS / Atom / JSON feeds: grouped digest with post titles and links
-  - Telegram channels: digest bullet with AI summary (or trimmed message text)
+  - Telegram channels: grouped digest with AI summary (or trimmed text)
     linking to the original post
 - Configure user settings with `/settings`
 
