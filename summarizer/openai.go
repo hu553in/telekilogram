@@ -25,7 +25,7 @@ const (
 	The output must be in one line of a single mid-length sentence,
 	in the same language as the input
 	(you must check input language by reading the entire text, not first words).
-	Max sentence length is 500 characters (but try to keep it much shorter).`
+	Max sentence length is 1000 characters (but try to keep it much shorter).`
 )
 
 // OpenAIConfig contains configuration for the OpenAI-backed summarizer.
