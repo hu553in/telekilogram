@@ -66,10 +66,12 @@ so pasting secrets with extra spaces will not break startup.
 - [x] Parallelise AI summarization of Telegram channel posts
 - [x] Check if logs can be enriched with some useful contextual info
 - [x] Trim whitespaces in any significant places
+- [ ] Fix a bug when the bot stops responding to requests
 - [ ] Add graceful shutdown
 - [ ] Fully protect Telegram max message length everywhere
 - [ ] Check if it's needed to introduce more detailed errors for users
 - [ ] Add tests (at least for critical functionality)
+- [ ] Use a newer AI model (optional)
 - [ ] Create mini app (optional)
 - [ ] Add paid subscription (with free tier) (optional)
 - [ ] Deploy using Docker instead of `systemd` service (optional)
