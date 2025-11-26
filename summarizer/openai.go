@@ -10,22 +10,17 @@ import (
 )
 
 const (
-	temperature         = 0.2
-	maxCompletionTokens = 150
+	maxCompletionTokens = 60
 
-	systemPrompt = `Summarize Telegram channel post
-	in a single mid-length sentence,
-	covering only the main idea so the user understands it
-	and can decide whether to open the full post.
-	Keep only critical context (dates, numbers, names, calls to action).
-	Do not enumerate any lists or examples -
-	summarize them as a single general statement.
-	Remove fillers/emojis/hashtags/links unless essential.
-	Stay neutral and objective.
-	The output must be in one line of a single mid-length sentence,
-	in the same language as the input
-	(you must check input language by reading the entire text, not first words).
-	Max sentence length is 1000 characters (but try to keep it much shorter).`
+	systemPrompt = `Summarize Telegram channel post in one ultra-short sentence
+	using the fewest words that still convey the core point (aim for ≤25 words;
+	never exceed 40). Stop as soon as the main idea is clear and the
+	requirements below are met. Include only critical context (dates, numbers,
+	names, calls to action). Do not enumerate lists or examples - condense
+	them into one general statement. Stay neutral and objective. Strip
+	fillers/emojis/hashtags/links unless essential. Output must be a single
+	line in the same language as the input (you must check input language by
+	reading the entire text, not first words).`
 )
 
 // OpenAIConfig contains configuration for the OpenAI-backed summarizer.
@@ -73,10 +68,11 @@ func (s *OpenAISummarizer) Summarize(
 	messages = append(messages, openai.UserMessage(promptBuilder.String()))
 
 	resp, err := s.client.Chat.Completions.New(ctx, openai.ChatCompletionNewParams{
-		Model:               openai.ChatModelGPT4_1Mini,
+		Model:               openai.ChatModel("gpt-5.1"),
 		Messages:            messages,
-		Temperature:         openai.Float(temperature),
 		MaxCompletionTokens: openai.Int(maxCompletionTokens),
+		ServiceTier:         openai.ChatCompletionNewParamsServiceTierFlex,
+		ReasoningEffort:     openai.ReasoningEffort("none"),
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed to do request: %w", err)

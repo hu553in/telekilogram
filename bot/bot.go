@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
@@ -50,53 +51,77 @@ func (b *Bot) Start() {
 	updateConfig := tgbotapi.NewUpdate(0)
 	updateConfig.Timeout = UpdateTimeout
 
-	updates := b.api.GetUpdatesChan(updateConfig)
+	backoffSeconds := 3
 
-	for update := range updates {
-		switch {
-		case update.Message != nil:
-			chatID, chatType := chatContext(update.Message.Chat)
+	for {
+		updates := b.api.GetUpdatesChan(updateConfig)
 
-			userID := update.Message.From.ID
-			if !b.userAllowed(update.Message.From.ID) {
-				slog.Debug("User is not allowed",
-					slog.Int64("userID", userID),
-					slog.Int64("chatID", chatID),
-					slog.String("username", update.Message.From.UserName),
-					slog.String("chatType", chatType))
+		for update := range updates {
+			updateConfig.Offset = update.UpdateID + 1
 
-				return
+			switch {
+			case update.Message != nil:
+				chatID, chatType := chatContext(update.Message.Chat)
+
+				userID := update.Message.From.ID
+				if !b.userAllowed(update.Message.From.ID) {
+					slog.Debug("User is not allowed",
+						slog.Int64("userID", userID),
+						slog.Int64("chatID", chatID),
+						slog.String("username", update.Message.From.UserName),
+						slog.String("chatType", chatType))
+
+					continue
+				}
+
+				if err := b.handleMessage(update.Message); err != nil {
+					slog.Error("Failed to handle message",
+						slog.Any("err", err),
+						slog.Int64("chatID", chatID),
+						slog.Int64("userID", userID),
+						slog.String("chatType", chatType),
+						slog.Int("messageID", update.Message.MessageID))
+				}
+
+			case update.CallbackQuery != nil:
+				chatID := callbackChatID(update.CallbackQuery)
+
+				if !b.userAllowed(update.CallbackQuery.From.ID) {
+					slog.Debug("User is not allowed",
+						slog.Int64("userID", update.CallbackQuery.From.ID),
+						slog.Int64("chatID", chatID),
+						slog.String("username", update.CallbackQuery.From.UserName),
+						slog.String("data", update.CallbackQuery.Data))
+
+					continue
+				}
+
+				if err := b.handleCallbackQuery(update.CallbackQuery); err != nil {
+					slog.Error("Failed to handle callback query",
+						slog.Any("err", err),
+						slog.Int64("chatID", chatID),
+						slog.Int64("userID", update.CallbackQuery.From.ID),
+						slog.String("data", update.CallbackQuery.Data),
+						slog.Int("messageID", callbackMessageID(update.CallbackQuery)))
+				}
 			}
+		}
 
-			if err := b.handleMessage(update.Message); err != nil {
-				slog.Error("Failed to handle message",
-					slog.Any("err", err),
-					slog.Int64("chatID", chatID),
-					slog.Int64("userID", userID),
-					slog.String("chatType", chatType),
-					slog.Int("messageID", update.Message.MessageID))
+		slog.Warn("Update channel is closed, reconnecting...",
+			slog.Int("offset", updateConfig.Offset),
+			slog.Int("backoffSeconds", backoffSeconds))
+
+		time.Sleep(time.Duration(backoffSeconds) * time.Second)
+
+		if backoffSeconds < 60 {
+			backoffSeconds *= 2
+			if backoffSeconds > 60 {
+				backoffSeconds = 60
 			}
-		case update.CallbackQuery != nil:
-			chatID := callbackChatID(update.CallbackQuery)
+		}
 
-			if !b.userAllowed(update.CallbackQuery.From.ID) {
-				slog.Debug("User is not allowed",
-					slog.Int64("userID", update.CallbackQuery.From.ID),
-					slog.Int64("chatID", chatID),
-					slog.String("username", update.CallbackQuery.From.UserName),
-					slog.String("data", update.CallbackQuery.Data))
-
-				return
-			}
-
-			if err := b.handleCallbackQuery(update.CallbackQuery); err != nil {
-				slog.Error("Failed to handle callback query",
-					slog.Any("err", err),
-					slog.Int64("chatID", chatID),
-					slog.Int64("userID", update.CallbackQuery.From.ID),
-					slog.String("data", update.CallbackQuery.Data),
-					slog.Int("messageID", callbackMessageID(update.CallbackQuery)))
-			}
+		if backoffSeconds >= 30 {
+			updateConfig.Offset = 0
 		}
 	}
 }

@@ -170,7 +170,7 @@ func FormatPostsAsMessages(posts []models.Post) []string {
 		)
 
 		firstBulletPoint := fmt.Sprintf(
-			"– [%s](%s)\n",
+			"– [%s](%s)\n\n",
 			markdown.EscapeV2(feedPosts[0].Title),
 			feedPosts[0].URL,
 		)
@@ -187,7 +187,7 @@ func FormatPostsAsMessages(posts []models.Post) []string {
 
 		for _, post := range feedPosts {
 			bulletPoint := fmt.Sprintf(
-				"– [%s](%s)\n",
+				"– [%s](%s)\n\n",
 				markdown.EscapeV2(post.Title),
 				post.URL,
 			)
@@ -201,8 +201,6 @@ func FormatPostsAsMessages(posts []models.Post) []string {
 
 			currentMessage.WriteString(bulletPoint)
 		}
-
-		currentMessage.WriteString("\n")
 	}
 
 	if currentMessage.Len() > headerLength {
