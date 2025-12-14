@@ -22,14 +22,12 @@
 
 ## Docs
 
-- In any Markdown file please consider the max line length equal 120 (excluding tables, long links
-  or code blocks, etc.)
+- In any Markdown file please consider the max line length equal 120 (excluding tables, long links or code blocks, etc.)
 - After doing any changes in project, check that any existing docs must be actualized:
   - `AGENTS.md`
   - `README.md`
   - code comments
-- New Markdown doc files must be named in the uppercase with underscores, e.g.:
-  `SOME_DOCUMENT.md`
+- New Markdown doc files must be named in the uppercase with underscores, e.g. `SOME_DOCUMENT.md`.
 
 ## Security
 

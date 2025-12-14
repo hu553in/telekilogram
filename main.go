@@ -9,8 +9,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/joho/godotenv"
-
 	"telekilogram/bot"
 	"telekilogram/database"
 	"telekilogram/feed"
@@ -18,23 +16,11 @@ import (
 	"telekilogram/summarizer"
 )
 
-const envFile = ".env"
-
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	slog.SetDefault(logger)
 
 	start := time.Now()
-
-	if err := godotenv.Load(); err != nil {
-		slog.Error("Failed to load .env file",
-			slog.Any("err", err),
-			slog.String("path", envFile))
-
-		return
-	}
-	slog.Info(".env file is loaded",
-		slog.String("path", envFile))
 
 	token := strings.TrimSpace(os.Getenv("TOKEN"))
 	if token == "" {
@@ -46,7 +32,7 @@ func main() {
 
 	dbPath := strings.TrimSpace(os.Getenv("DB_PATH"))
 	if dbPath == "" {
-		dbPath = "./db"
+		dbPath = "db.sqlite"
 		slog.Info("Using default DB path",
 			slog.String("dbPath", dbPath))
 	}
