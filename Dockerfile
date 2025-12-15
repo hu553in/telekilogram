@@ -2,9 +2,8 @@
 
 ARG GO_VERSION=1.25.5
 ARG DEBIAN_VERSION=bookworm
-ARG TARGETPLATFORM
 
-FROM --platform=$TARGETPLATFORM golang:${GO_VERSION}-${DEBIAN_VERSION} AS builder
+FROM golang:${GO_VERSION}-${DEBIAN_VERSION} AS builder
 WORKDIR /src
 
 COPY go.mod go.sum ./
