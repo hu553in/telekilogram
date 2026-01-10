@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -13,7 +14,15 @@ func (b *Bot) sendMessageWithKeyboard(
 	text string,
 	keyboard [][]tgbotapi.InlineKeyboardButton,
 ) error {
-	message := tgbotapi.NewMessage(chatID, text)
+	normalizedText := strings.ToValidUTF8(text, "?")
+	if normalizedText != text {
+		b.log.Warn("Message text had invalid UTF-8 and was normalized",
+			"chatID", chatID,
+			"originalLen", len(text),
+			"normalizedLen", len(normalizedText))
+	}
+
+	message := tgbotapi.NewMessage(chatID, normalizedText)
 
 	// See https://core.telegram.org/bots/api#markdownv2-style.
 	message.ParseMode = tgbotapi.ModeMarkdownV2
