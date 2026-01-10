@@ -2,6 +2,7 @@ package summarizer
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -36,9 +37,7 @@ type OpenAISummarizer struct {
 // NewOpenAISummarizer builds a new summarizer instance.
 func NewOpenAISummarizer(cfg OpenAIConfig) (*OpenAISummarizer, error) {
 	return &OpenAISummarizer{
-		client: openai.NewClient(
-			option.WithAPIKey(cfg.APIKey),
-		),
+		client: openai.NewClient(option.WithAPIKey(cfg.APIKey)),
 	}, nil
 }
 
@@ -49,7 +48,7 @@ func (s *OpenAISummarizer) Summarize(
 ) (string, error) {
 	text := strings.TrimSpace(input.Text)
 	if text == "" {
-		return "", fmt.Errorf("input is required")
+		return "", errors.New("input is required")
 	}
 
 	messages := []openai.ChatCompletionMessageParamUnion{
@@ -79,12 +78,12 @@ func (s *OpenAISummarizer) Summarize(
 	}
 
 	if len(resp.Choices) == 0 {
-		return "", fmt.Errorf("chat completion choices are missing")
+		return "", errors.New("chat completion choices are missing")
 	}
 
 	summary := strings.TrimSpace(resp.Choices[0].Message.Content)
 	if summary == "" {
-		return "", fmt.Errorf("chat completion choice message content is missing")
+		return "", errors.New("chat completion choice message content is missing")
 	}
 
 	return summary, nil

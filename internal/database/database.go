@@ -1,28 +1,29 @@
 package database
 
 import (
+	"context"
 	"database/sql"
 	"embed"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/sqlite3"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
+	_ "github.com/golang-migrate/migrate/v4/source/file" // Required by the library implementation.
 	"github.com/golang-migrate/migrate/v4/source/iofs"
-	_ "github.com/mattn/go-sqlite3"
-
-	"log/slog"
+	_ "github.com/mattn/go-sqlite3" // Required by the library implementation.
 )
 
 type Database struct {
-	db *sql.DB
+	db  *sql.DB
+	log *slog.Logger
 }
 
 //go:embed migrations/*.sql
 var migrationsFS embed.FS
 
-func New(dbPath string) (*Database, error) {
+func New(ctx context.Context, dbPath string, log *slog.Logger) (*Database, error) {
 	dbFile, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open DB file: %w", err)
@@ -38,12 +39,7 @@ func New(dbPath string) (*Database, error) {
 		return nil, fmt.Errorf("failed to create source instance: %w", err)
 	}
 
-	m, err := migrate.NewWithInstance(
-		"iofs",
-		srcInstance,
-		"sqlite3",
-		dbInstance,
-	)
+	m, err := migrate.NewWithInstance("iofs", srcInstance, "sqlite3", dbInstance)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create migrate instance: %w", err)
 	}
@@ -52,19 +48,15 @@ func New(dbPath string) (*Database, error) {
 
 	version, dirty, versionErr := m.Version()
 	fields := []any{
-		slog.String("dbPath", dbPath),
+		"dbPath", dbPath,
 	}
 
 	if versionErr == nil {
-		fields = append(
-			fields,
-			slog.Uint64("version", uint64(version)),
-			slog.Bool("dirty", dirty),
-		)
+		fields = append(fields, "version", version, "dirty", dirty)
 	} else if !errors.Is(versionErr, migrate.ErrNilVersion) {
-		slog.Warn("Failed to fetch migration version",
-			slog.Any("err", versionErr),
-			slog.String("dbPath", dbPath))
+		log.WarnContext(ctx, "Failed to fetch migration version",
+			"error", versionErr,
+			"dbPath", dbPath)
 	}
 
 	if migrateErr != nil {
@@ -72,12 +64,12 @@ func New(dbPath string) (*Database, error) {
 			return nil, fmt.Errorf("failed to apply migrations: %w", migrateErr)
 		}
 
-		slog.Info("No migrations to apply", fields...)
+		log.InfoContext(ctx, "No migrations to apply", fields...)
 	} else {
-		slog.Info("DB is migrated", fields...)
+		log.InfoContext(ctx, "DB is migrated", fields...)
 	}
 
-	return &Database{db: dbFile}, nil
+	return &Database{db: dbFile, log: log}, nil
 }
 
 func (d *Database) Close() error {

@@ -27,9 +27,10 @@ type RateLimiter struct {
 	mu       sync.Mutex
 	ctx      context.Context
 	cancel   context.CancelFunc
+	log      *slog.Logger
 }
 
-func New(api *tgbotapi.BotAPI) *RateLimiter {
+func New(api *tgbotapi.BotAPI, log *slog.Logger) *RateLimiter {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	rl := &RateLimiter{
@@ -38,6 +39,7 @@ func New(api *tgbotapi.BotAPI) *RateLimiter {
 		lastSent: make(map[int64]time.Time),
 		ctx:      ctx,
 		cancel:   cancel,
+		log:      log,
 	}
 
 	go rl.processQueue()
@@ -104,11 +106,11 @@ func (rl *RateLimiter) handleRequest(req request) {
 
 		if delay > 0 {
 			messageType := fmt.Sprintf("%T", req.message)
-			slog.Debug("Rate limiting message",
-				slog.Int64("chatID", chatID),
-				slog.Duration("delay", delay),
-				slog.String("chattableType", messageType),
-				slog.Int("queueLen", len(rl.queue)))
+			rl.log.DebugContext(rl.ctx, "Rate limiting message",
+				"chatID", chatID,
+				"delay", delay,
+				"chattableType", messageType,
+				"queueLen", len(rl.queue))
 
 			select {
 			case <-time.After(delay):

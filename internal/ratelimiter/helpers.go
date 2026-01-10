@@ -34,7 +34,6 @@ func getDelay(
 func getRate(chatID int64) time.Duration {
 	if chatID < 0 {
 		return groupChatRate
-	} else {
-		return privateChatRate
 	}
+	return privateChatRate
 }

@@ -15,7 +15,7 @@ func (b *Bot) sendMessageWithKeyboard(
 ) error {
 	message := tgbotapi.NewMessage(chatID, text)
 
-	// https://core.telegram.org/bots/api#markdownv2-style
+	// See https://core.telegram.org/bots/api#markdownv2-style.
 	message.ParseMode = tgbotapi.ModeMarkdownV2
 
 	message.DisableWebPagePreview = true
@@ -58,17 +58,8 @@ func (b *Bot) withEmptyCallbackAnswer(
 ) error {
 	var errs []error
 
-	if _, err := b.rateLimiter.Request(tgbotapi.NewCallback(
-		callback.ID,
-		"",
-	)); err != nil {
-		errs = append(
-			errs,
-			b.errorCallbackAnswer(
-				callback,
-				fmt.Errorf("failed to send request: %w", err),
-			),
-		)
+	if _, err := b.rateLimiter.Request(tgbotapi.NewCallback(callback.ID, "")); err != nil {
+		errs = append(errs, b.errorCallbackAnswer(callback, fmt.Errorf("failed to send request: %w", err)))
 	}
 
 	err := function()
@@ -83,10 +74,7 @@ func (b *Bot) errorCallbackAnswer(
 	callback *tgbotapi.CallbackQuery,
 	err error,
 ) error {
-	if _, sendErr := b.rateLimiter.Request(tgbotapi.NewCallback(
-		callback.ID,
-		"❌ Failed.",
-	)); sendErr != nil {
+	if _, sendErr := b.rateLimiter.Request(tgbotapi.NewCallback(callback.ID, "❌ Failed.")); sendErr != nil {
 		return errors.Join(err, fmt.Errorf("failed to send request: %w", sendErr))
 	}
 

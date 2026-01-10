@@ -46,7 +46,11 @@ func (c *telegramSummaryCache) get(key string, now time.Time) (string, bool) {
 		return "", false
 	}
 
-	entry := elem.Value.(*telegramSummaryCacheEntry)
+	entry, ok := elem.Value.(*telegramSummaryCacheEntry)
+	if !ok {
+		return "", false
+	}
+
 	if now.After(entry.expiresAt) {
 		c.removeElement(elem)
 
@@ -76,7 +80,11 @@ func (c *telegramSummaryCache) set(
 	defer c.mu.Unlock()
 
 	if elem, ok := c.entries[key]; ok {
-		entry := elem.Value.(*telegramSummaryCacheEntry)
+		entry, castOk := elem.Value.(*telegramSummaryCacheEntry)
+		if !castOk {
+			return
+		}
+
 		entry.summary = summary
 		entry.expiresAt = expiresAt
 		c.order.MoveToFront(elem)
@@ -98,7 +106,11 @@ func (c *telegramSummaryCache) set(
 func (c *telegramSummaryCache) evictExpiredLocked(now time.Time) {
 	for elem := c.order.Back(); elem != nil; {
 		prev := elem.Prev()
-		entry := elem.Value.(*telegramSummaryCacheEntry)
+		entry, ok := elem.Value.(*telegramSummaryCacheEntry)
+		if !ok {
+			continue
+		}
+
 		if now.After(entry.expiresAt) {
 			c.removeElement(elem)
 		}
@@ -117,7 +129,11 @@ func (c *telegramSummaryCache) enforceSizeLimitLocked() {
 }
 
 func (c *telegramSummaryCache) removeElement(elem *list.Element) {
-	entry := elem.Value.(*telegramSummaryCacheEntry)
+	entry, ok := elem.Value.(*telegramSummaryCacheEntry)
+	if !ok {
+		return
+	}
+
 	delete(c.entries, entry.key)
 	c.order.Remove(elem)
 }

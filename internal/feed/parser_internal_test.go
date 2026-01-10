@@ -2,11 +2,11 @@ package feed
 
 import (
 	"context"
+	"log/slog"
 	"sync"
+	"telekilogram/internal/summarizer"
 	"testing"
 	"time"
-
-	"telekilogram/summarizer"
 )
 
 const editedSummary = "edited summary"
@@ -18,8 +18,8 @@ type stubSummarizer struct {
 }
 
 func (s *stubSummarizer) Summarize(
-	ctx context.Context,
-	input summarizer.Input,
+	_ context.Context,
+	_ summarizer.Input,
 ) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -41,7 +41,7 @@ type echoCountingSummarizer struct {
 }
 
 func (s *echoCountingSummarizer) Summarize(
-	ctx context.Context,
+	_ context.Context,
 	input summarizer.Input,
 ) (string, error) {
 	s.mu.Lock()
@@ -59,25 +59,15 @@ func (s *echoCountingSummarizer) callCount() int {
 }
 
 func TestTelegramSummaryCacheKey(t *testing.T) {
-	keyA := telegramSummaryCacheKey(
-		" https://t.me/example/123?single=1 ",
-		" Example post text ",
-	)
-	keyB := telegramSummaryCacheKey(
-		"https://t.me/example/123",
-		"Example post text",
-	)
+	keyA := telegramSummaryCacheKey(" https://t.me/example/123?single=1 ", " Example post text ")
+	keyB := telegramSummaryCacheKey("https://t.me/example/123", "Example post text")
 
 	if keyA == "" || keyB == "" {
 		t.Fatalf("expected non-empty cache keys")
 	}
 
 	if keyA != keyB {
-		t.Fatalf(
-			"expected canonicalized cache keys to match, got %q vs %q",
-			keyA,
-			keyB,
-		)
+		t.Fatalf("expected canonicalized cache keys to match, got %q vs %q", keyA, keyB)
 	}
 
 	if key := telegramSummaryCacheKey("https://t.me/example/123", " "); key != "" {
@@ -87,7 +77,7 @@ func TestTelegramSummaryCacheKey(t *testing.T) {
 
 func TestFeedParserSummarizeTelegramPostUsesCache(t *testing.T) {
 	stub := &stubSummarizer{summary: "cached summary"}
-	parser := NewFeedParser(nil, stub)
+	parser := NewParser(nil, stub, slog.Default())
 
 	item := channelItem{
 		URL:       "https://t.me/example/123",
@@ -115,7 +105,7 @@ func TestFeedParserSummarizeTelegramPostUsesCache(t *testing.T) {
 
 func TestFeedParserSummarizeTelegramPostEditedTextBypassesCache(t *testing.T) {
 	stub := &stubSummarizer{summary: "original summary"}
-	parser := NewFeedParser(nil, stub)
+	parser := NewParser(nil, stub, slog.Default())
 
 	item := channelItem{
 		URL:       "https://t.me/example/123",
@@ -125,10 +115,7 @@ func TestFeedParserSummarizeTelegramPostEditedTextBypassesCache(t *testing.T) {
 
 	ctx := context.Background()
 
-	if summary := parser.summarizeTelegramPost(
-		ctx,
-		item,
-	); summary != "original summary" {
+	if summary := parser.summarizeTelegramPost(ctx, item); summary != "original summary" {
 		t.Fatalf("unexpected initial summary: %q", summary)
 	}
 
@@ -140,10 +127,7 @@ func TestFeedParserSummarizeTelegramPostEditedTextBypassesCache(t *testing.T) {
 	edited := item
 	edited.Text = "Example post text (edited)"
 
-	if summary := parser.summarizeTelegramPost(
-		ctx,
-		edited,
-	); summary != editedSummary {
+	if summary := parser.summarizeTelegramPost(ctx, edited); summary != editedSummary {
 		t.Fatalf("unexpected edited summary: %q", summary)
 	}
 
@@ -152,10 +136,7 @@ func TestFeedParserSummarizeTelegramPostEditedTextBypassesCache(t *testing.T) {
 	}
 
 	stub.summary = "should not be used"
-	if summary := parser.summarizeTelegramPost(
-		ctx,
-		edited,
-	); summary != editedSummary {
+	if summary := parser.summarizeTelegramPost(ctx, edited); summary != editedSummary {
 		t.Fatalf("expected cached edited summary, got %q", summary)
 	}
 
@@ -166,7 +147,7 @@ func TestFeedParserSummarizeTelegramPostEditedTextBypassesCache(t *testing.T) {
 
 func TestFeedParserSummarizeTelegramPostsPreservesOrder(t *testing.T) {
 	echo := &echoCountingSummarizer{}
-	parser := NewFeedParser(nil, echo)
+	parser := NewParser(nil, echo, slog.Default())
 
 	candidates := []telegramSummarizationCandidate{
 		{
@@ -187,11 +168,7 @@ func TestFeedParserSummarizeTelegramPostsPreservesOrder(t *testing.T) {
 	summaries := parser.summarizeTelegramPosts(ctx, candidates)
 
 	if got := echo.callCount(); got != len(candidates) {
-		t.Fatalf(
-			"expected summarizer to be called %d times, got %d",
-			len(candidates),
-			got,
-		)
+		t.Fatalf("expected summarizer to be called %d times, got %d", len(candidates), got)
 	}
 
 	maxIndex := 0
@@ -209,12 +186,7 @@ func TestFeedParserSummarizeTelegramPostsPreservesOrder(t *testing.T) {
 	want := []string{"first", "second", "third"}
 	for i := range want {
 		if titles[i] != want[i] {
-			t.Fatalf(
-				"unexpected title at index %d: got %q want %q",
-				i,
-				titles[i],
-				want[i],
-			)
+			t.Fatalf("unexpected title at index %d: got %q want %q", i, titles[i], want[i])
 		}
 	}
 }
