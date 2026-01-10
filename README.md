@@ -42,7 +42,6 @@ OPENAI_API_KEY="example"
 
 ## Future roadmap
 
-- [ ] Add graceful shutdown
 - [ ] Fully protect Telegram max message length everywhere
 - [ ] Check if it's needed to introduce more detailed errors for users
 - [ ] Add tests (at least for critical functionality)
