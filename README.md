@@ -9,47 +9,60 @@
 - [How to contribute](./CONTRIBUTING.md)
 - [Code of conduct](./CODE_OF_CONDUCT.md)
 
-Feed assistant Telegram bot written in Go.
+A feed assistant Telegram bot written in Go.
+
+Telekilogram aggregates content from RSS/Atom/JSON feeds and public Telegram channels, delivers daily digests,
+and optionally summarizes Telegram posts using OpenAI. It is designed to be reliable, predictable, and suitable
+for unattended operation.
+
+---
 
 ## Functionality
 
-- Follow RSS / Atom / JSON feeds and public Telegram channels by sending URLs, channel `@username` slugs,
-  or forwarding messages from channels to bot
-- Get feed list with `/list`
-- Unfollow feeds directly from list
-- Receive 24h auto-digest daily automatically (default - 00:00 UTC)
-- Receive 24h digest with `/digest`
-- Summarize Telegram channel posts with OpenAI (falls back to local truncation when `OPENAI_API_KEY` is not provided)
-  and cache each summary for 24h to avoid reprocessing the same post across users
-- Invalidate cached AI summaries for edited Telegram channel posts
-- Message format:
+- Follow RSS, Atom, and JSON feeds, as well as public Telegram channels:
+  - send a feed URL
+  - send a channel `@username`
+  - forward a message from a channel to the bot
+- View the current feed list with `/list`.
+- Unfollow feeds directly from the list.
+- Receive an automatic 24-hour digest every day (default: 00:00 UTC).
+- Request a 24-hour digest manually with `/digest`.
+- Summarize Telegram channel posts using OpenAI:
+  - automatically falls back to local text truncation if `OPENAI_API_KEY` is not set
+  - summaries are cached for 24 hours to avoid reprocessing the same post across users
+  - cached summaries are invalidated if a Telegram post is edited
+- Message formatting:
   - RSS / Atom / JSON feeds: grouped digest with post titles and links
-  - Telegram channels: grouped digest with AI summary (or trimmed text) linking to the original post
-- Configure user settings with `/settings`
+  - Telegram channels: grouped digest with AI-generated summaries (or trimmed text) linking to the original posts
+- Configure user-specific settings via `/settings`.
+
+---
 
 ## Environment variables
 
-| Name             | Required | Default     | Description                                                                                                 |
-| ---------------- | -------- | ----------- | ----------------------------------------------------------------------------------------------------------- |
-| `TOKEN`          | Yes      | –           | -                                                                                                           |
-| `DB_PATH`        | No       | `db.sqlite` | Filesystem location of the SQLite database. Creates the file on first run if it does not exist.             |
-| `ALLOWED_USERS`  | No       | –           | The comma-separated list of Telegram user IDs allowed to interact with the bot.                             |
-| `OPENAI_API_KEY` | No       | –           | Enables OpenAI-backed summaries for Telegram channel posts (local truncation will be used if not provided). |
+| Name             | Required | Default     | Description                                                                                            |
+| ---------------- | -------- | ----------- | ------------------------------------------------------------------------------------------------------ |
+| `TOKEN`          | Yes      | –           | Telegram bot token.                                                                                    |
+| `DB_PATH`        | No       | `db.sqlite` | Filesystem path to the SQLite database. The file is created automatically on first run.                |
+| `ALLOWED_USERS`  | No       | –           | Comma-separated list of Telegram user IDs allowed to interact with the bot.                            |
+| `OPENAI_API_KEY` | No       | –           | Enables OpenAI-based summaries for Telegram channel posts. If unset, local truncation is used instead. |
 
-Example:
+## Example configuration
 
 ```
-TOKEN="example"
-DB_PATH="db.sqlite"
-ALLOWED_USERS="1,2"
+TOKEN="example"  
+DB_PATH="db.sqlite"  
+ALLOWED_USERS="1,2"  
 OPENAI_API_KEY="example"
 ```
 
+---
+
 ## Future roadmap
 
-- [ ] Fully protect Telegram max message length everywhere
-- [ ] Check if it's needed to introduce more detailed errors for users
-- [ ] Add tests (at least for critical functionality)
-- [ ] Create mini app (optional)
-- [ ] Add paid subscription with free tier (optional)
+- [ ] Fully enforce Telegram maximum message length limits
+- [ ] Evaluate the need for more detailed user-facing error messages
+- [ ] Add tests for critical functionality
+- [ ] Create a mini app (optional)
+- [ ] Introduce paid subscriptions with a free tier (optional)
 - [ ] Migrate to https://github.com/go-telegram/bot (optional)
