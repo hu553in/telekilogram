@@ -50,9 +50,9 @@ for unattended operation.
 ## Example configuration
 
 ```
-TOKEN="example"  
-DB_PATH="db.sqlite"  
-ALLOWED_USERS="1,2"  
+TOKEN="example"
+DB_PATH="db.sqlite"
+ALLOWED_USERS="1,2"
 OPENAI_API_KEY="example"
 ```
 
