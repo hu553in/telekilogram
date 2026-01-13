@@ -55,14 +55,3 @@ DB_PATH="db.sqlite"
 ALLOWED_USERS="1,2"
 OPENAI_API_KEY="example"
 ```
-
----
-
-## Future roadmap
-
-- [ ] Fully enforce Telegram maximum message length limits
-- [ ] Evaluate the need for more detailed user-facing error messages
-- [ ] Add tests for critical functionality
-- [ ] Create a mini app (optional)
-- [ ] Introduce paid subscriptions with a free tier (optional)
-- [ ] Migrate to https://github.com/go-telegram/bot (optional)
