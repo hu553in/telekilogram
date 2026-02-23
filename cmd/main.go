@@ -152,7 +152,7 @@ func initOpenAISummarizer(ctx context.Context, log *slog.Logger) summarizer.Summ
 		return nil
 	}
 
-	s, err := summarizer.NewOpenAISummarizer(summarizer.OpenAIConfig{APIKey: apiKey})
+	s, err := summarizer.NewOpenAISummarizer(apiKey)
 	if err != nil {
 		log.ErrorContext(ctx, "Failed to create OpenAI summarizer so fallback will be used",
 			"error", err,

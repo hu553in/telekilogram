@@ -109,7 +109,7 @@ func (b *Bot) handleListCommand(ctx context.Context, chatID int64, userID int64)
 	}
 
 	var message strings.Builder
-	message.WriteString(fmt.Sprintf("🔍 *Found %d feeds:*\n\n", len(feeds)))
+	fmt.Fprintf(&message, "🔍 *Found %d feeds:*\n\n", len(feeds))
 
 	botInfo, botInfoErr := b.api.GetMe()
 	if botInfoErr != nil {
@@ -128,16 +128,17 @@ func (b *Bot) handleListCommand(ctx context.Context, chatID int64, userID int64)
 		}
 
 		if botInfoErr == nil {
-			message.WriteString(fmt.Sprintf(
+			fmt.Fprintf(
+				&message,
 				"%d\\. [%s](%s) \\[[unfollow](https://t\\.me/%s?start=unfollow_%d)\\]\n",
 				i+1,
 				markdown.EscapeV2(title),
 				url,
 				botInfo.UserName,
 				f.ID,
-			))
+			)
 		} else {
-			message.WriteString(fmt.Sprintf("%d\\. [%s](%s)\n", i+1, markdown.EscapeV2(title), url))
+			fmt.Fprintf(&message, "%d\\. [%s](%s)\n", i+1, markdown.EscapeV2(title), url)
 		}
 	}
 

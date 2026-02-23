@@ -24,20 +24,15 @@ const (
 	reading the entire text, not first words).`
 )
 
-// OpenAIConfig contains configuration for the OpenAI-backed summarizer.
-type OpenAIConfig struct {
-	APIKey string
-}
-
 // OpenAISummarizer calls OpenAI's Chat Completions API to produce summaries.
 type OpenAISummarizer struct {
 	client openai.Client
 }
 
 // NewOpenAISummarizer builds a new summarizer instance.
-func NewOpenAISummarizer(cfg OpenAIConfig) (*OpenAISummarizer, error) {
+func NewOpenAISummarizer(apiKey string) (*OpenAISummarizer, error) {
 	return &OpenAISummarizer{
-		client: openai.NewClient(option.WithAPIKey(cfg.APIKey)),
+		client: openai.NewClient(option.WithAPIKey(apiKey)),
 	}, nil
 }
 

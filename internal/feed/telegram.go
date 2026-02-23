@@ -102,7 +102,7 @@ func fetchTelegramChannelTitle(ctx context.Context, slug string, log *slog.Logge
 
 	req.Header.Set("User-Agent", userAgent)
 
-	resp, err := telegramClient.Do(req)
+	resp, err := telegramClient.Do(req) //nolint:gosec // Telegram URL
 	if err != nil {
 		return "", fmt.Errorf("failed to do request: %w", err)
 	}
@@ -145,7 +145,7 @@ func fetchTelegramChannelPosts(ctx context.Context, slug string, log *slog.Logge
 
 	req.Header.Set("User-Agent", userAgent)
 
-	resp, err := telegramClient.Do(req)
+	resp, err := telegramClient.Do(req) //nolint:gosec // Telegram URL
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to do request: %w", err)
 	}
