@@ -5,10 +5,9 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
-	"strconv"
-	"strings"
 	"syscall"
 	"telekilogram/internal/bot"
+	"telekilogram/internal/config"
 	"telekilogram/internal/database"
 	"telekilogram/internal/feed"
 	"telekilogram/internal/scheduler"
@@ -25,19 +24,13 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	token := strings.TrimSpace(os.Getenv("TOKEN"))
-	if token == "" {
-		log.ErrorContext(ctx, "TOKEN is required",
-			"envVar", "TOKEN")
+	config := config.LoadConfig()
 
-		return
-	}
-
-	dbPath, db, err := initDatabase(ctx, log)
+	db, err := database.New(ctx, config.DBPath, log)
 	if err != nil {
 		log.ErrorContext(ctx, "Failed to initialize db",
 			"error", err,
-			"dbPath", dbPath)
+			"dbPath", config.DBPath)
 
 		return
 	}
@@ -45,35 +38,25 @@ func main() {
 		if err = db.Close(); err != nil {
 			log.ErrorContext(ctx, "Failed to close db",
 				"error", err,
-				"dbPath", dbPath)
+				"dbPath", config.DBPath)
 		}
 	}()
 	log.InfoContext(ctx, "DB is initialized",
-		"dbPath", dbPath)
+		"dbPath", config.DBPath)
 
-	allowedUsersTrimmed := strings.TrimSpace(os.Getenv("ALLOWED_USERS"))
-	allowedUsersStr := strings.Split(allowedUsersTrimmed, ",")
-	allowedUsers, ok := processAllowedUsersStr(allowedUsersStr)
-	if !ok {
-		log.ErrorContext(ctx, "ALLOWED_USERS must be empty or comma-separated int64 list",
-			"ALLOWED_USERS", allowedUsersTrimmed)
-
-		return
-	}
-
-	summarizer := initOpenAISummarizer(ctx, log)
+	summarizer := initOpenAISummarizer(ctx, config.OpenAIAPIKey, log)
 	fetcher := feed.NewFetcher(db, summarizer, log)
 
-	botInst, err := bot.New(token, db, fetcher, allowedUsers, log)
+	botInst, err := bot.New(config.Token, db, fetcher, config.AllowedUsers, log)
 	if err != nil {
 		log.ErrorContext(ctx, "Failed to initialize bot",
 			"error", err,
-			"allowedUsersCount", len(allowedUsers))
+			"allowedUsersCount", len(config.AllowedUsers))
 
 		return
 	}
 	log.InfoContext(ctx, "Bot is initialized",
-		"allowedUsersCount", len(allowedUsers))
+		"allowedUsersCount", len(config.AllowedUsers))
 
 	sched := scheduler.New(ctx, botInst, fetcher, log)
 
@@ -112,39 +95,7 @@ func main() {
 		"uptimeSeconds", time.Since(start).Seconds())
 }
 
-func processAllowedUsersStr(allowedUsersStr []string) ([]int64, bool) {
-	var allowedUsers []int64
-
-	for _, userIDStr := range allowedUsersStr {
-		userIDStr = strings.TrimSpace(userIDStr)
-		if userIDStr == "" {
-			continue
-		}
-
-		userID, parseIntErr := strconv.ParseInt(userIDStr, 10, 64)
-		if parseIntErr != nil {
-			return nil, false
-		}
-		allowedUsers = append(allowedUsers, userID)
-	}
-
-	return allowedUsers, true
-}
-
-func initDatabase(ctx context.Context, log *slog.Logger) (string, *database.Database, error) {
-	dbPath := strings.TrimSpace(os.Getenv("DB_PATH"))
-	if dbPath == "" {
-		dbPath = "db.sqlite"
-		log.InfoContext(ctx, "Using default DB path",
-			"dbPath", dbPath)
-	}
-
-	db, err := database.New(ctx, dbPath, log)
-	return dbPath, db, err
-}
-
-func initOpenAISummarizer(ctx context.Context, log *slog.Logger) summarizer.Summarizer {
-	apiKey := strings.TrimSpace(os.Getenv("OPENAI_API_KEY"))
+func initOpenAISummarizer(ctx context.Context, apiKey string, log *slog.Logger) summarizer.Summarizer {
 	if apiKey == "" {
 		log.WarnContext(ctx, "OPENAI_API_KEY is missing so fallback will be used",
 			"envVar", "OPENAI_API_KEY")
