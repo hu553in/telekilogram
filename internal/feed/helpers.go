@@ -245,7 +245,7 @@ func validateFeed(ctx context.Context, feedURL string, log *slog.Logger) (*model
 
 		canonicalURL := TelegramChannelCanonicalURL(slug)
 		if canonicalURL == "" {
-			return nil, fmt.Errorf("failed to build canonical URL for slug %q", slug)
+			return nil, fmt.Errorf("failed to build canonical URL (slug = %s)", slug)
 		}
 
 		title = strings.TrimSpace(title)
@@ -265,7 +265,7 @@ func validateFeed(ctx context.Context, feedURL string, log *slog.Logger) (*model
 
 	parsed, err := libParser.ParseURLWithContext(feedURL, ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse feed by URL %q: %w", feedURL, err)
+		return nil, fmt.Errorf("failed to parse feed (URL = %s): %w", feedURL, err)
 	}
 
 	title := strings.TrimSpace(parsed.Title)

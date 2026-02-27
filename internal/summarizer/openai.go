@@ -8,10 +8,12 @@ import (
 
 	"github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/option"
+	"github.com/openai/openai-go/v3/responses"
 )
 
 const (
-	maxCompletionTokens = 60
+	baseMaxOutputTokens  int64 = 512
+	limitMaxOutputTokens int64 = 2048
 
 	systemPrompt = `Summarize the Telegram post in one ultra-short sentence.
 
@@ -24,7 +26,7 @@ Rules:
 - Output exactly one line in the same language as the input.`
 )
 
-// OpenAISummarizer calls OpenAI's Chat Completions API to produce summaries.
+// OpenAISummarizer calls OpenAI's Responses API to produce summaries.
 type OpenAISummarizer struct {
 	client openai.Client
 }
@@ -46,40 +48,52 @@ func (s *OpenAISummarizer) Summarize(
 		return "", errors.New("input is required")
 	}
 
-	messages := []openai.ChatCompletionMessageParamUnion{
-		openai.SystemMessage(systemPrompt),
-	}
-
-	promptBuilder := strings.Builder{}
+	userPromptBuilder := strings.Builder{}
 	if sourceURL := strings.TrimSpace(input.SourceURL); sourceURL != "" {
-		promptBuilder.WriteString("Source: ")
-		promptBuilder.WriteString(sourceURL)
-		promptBuilder.WriteString("\n")
+		userPromptBuilder.WriteString("Source:\n")
+		userPromptBuilder.WriteString(sourceURL)
+		userPromptBuilder.WriteString("\n")
 	}
-	promptBuilder.WriteString("Content:\n")
-	promptBuilder.WriteString(text)
+	userPromptBuilder.WriteString("Content:\n")
+	userPromptBuilder.WriteString(text)
 
-	messages = append(messages, openai.UserMessage(promptBuilder.String()))
+	maxOutputTokens := baseMaxOutputTokens
+	for {
+		resp, err := s.client.Responses.New(ctx, responses.ResponseNewParams{
+			Model:           openai.ChatModelGPT5Mini2025_08_07,
+			ServiceTier:     responses.ResponseNewParamsServiceTierFlex,
+			MaxOutputTokens: openai.Int(maxOutputTokens),
+			Reasoning: responses.ReasoningParam{
+				Effort: openai.ReasoningEffortLow,
+			},
+			Instructions: openai.String(systemPrompt),
+			Input: responses.ResponseNewParamsInputUnion{
+				OfString: openai.String(userPromptBuilder.String()),
+			},
+		})
+		if err != nil {
+			return "", fmt.Errorf("failed to do request: %w", err)
+		}
 
-	resp, err := s.client.Chat.Completions.New(ctx, openai.ChatCompletionNewParams{
-		Model:               openai.ChatModelGPT5Mini2025_08_07,
-		Messages:            messages,
-		MaxCompletionTokens: openai.Int(maxCompletionTokens),
-		ServiceTier:         openai.ChatCompletionNewParamsServiceTierFlex,
-		ReasoningEffort:     openai.ReasoningEffortLow,
-	})
-	if err != nil {
-		return "", fmt.Errorf("failed to do request: %w", err)
+		if resp.Status == "incomplete" {
+			if resp.IncompleteDetails.Reason == "max_output_tokens" && maxOutputTokens < limitMaxOutputTokens {
+				maxOutputTokens *= 2
+				if maxOutputTokens > limitMaxOutputTokens {
+					maxOutputTokens = limitMaxOutputTokens
+				}
+				continue
+			}
+			return "", fmt.Errorf(
+				"response is incomplete (reason = %s, maxOutputTokens = %d)",
+				resp.IncompleteDetails.Reason,
+				maxOutputTokens,
+			)
+		}
+
+		summary := strings.TrimSpace(resp.OutputText())
+		if summary == "" {
+			return "", fmt.Errorf("output text is missing (status = %s)", resp.Status)
+		}
+		return summary, nil
 	}
-
-	if len(resp.Choices) == 0 {
-		return "", errors.New("chat completion choices are missing")
-	}
-
-	summary := strings.TrimSpace(resp.Choices[0].Message.Content)
-	if summary == "" {
-		return "", errors.New("chat completion choice message content is missing")
-	}
-
-	return summary, nil
 }

@@ -60,7 +60,7 @@ func (fp *Parser) ParseFeed(
 
 	parsed, err := libParser.ParseURLWithContext(normalizedFeedURL, ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse feed by URL %q: %w", normalizedFeedURL, err)
+		return nil, fmt.Errorf("failed to parse feed (URL = %s): %w", normalizedFeedURL, err)
 	}
 
 	parsedTitle := strings.TrimSpace(parsed.Title)
@@ -179,7 +179,7 @@ func (fp *Parser) parseTelegramChannelFeed(
 		canonicalURL = TelegramChannelCanonicalURL(slug)
 	)
 	if canonicalURL == "" {
-		return nil, fmt.Errorf("failed to build canonical URL for slug %q", slug)
+		return nil, fmt.Errorf("failed to build canonical URL (slug = %s)", slug)
 	}
 
 	feedTitle := channelTitle
