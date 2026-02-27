@@ -13,15 +13,15 @@ import (
 const (
 	maxCompletionTokens = 60
 
-	systemPrompt = `Summarize Telegram channel post in one ultra-short sentence
-	using the fewest words that still convey the core point (aim for ≤25 words;
-	never exceed 40). Stop as soon as the main idea is clear and the
-	requirements below are met. Include only critical context (dates, numbers,
-	names, calls to action). Do not enumerate lists or examples - condense
-	them into one general statement. Stay neutral and objective. Strip
-	fillers/emojis/hashtags/links unless essential. Output must be a single
-	line in the same language as the input (you must check input language by
-	reading the entire text, not first words).`
+	systemPrompt = `Summarize the Telegram post in one ultra-short sentence.
+
+Rules:
+- ≤25 words (hard limit 40).
+- Include only core idea and critical context (dates, numbers, names, calls to action).
+- No lists, no examples — compress into one general statement.
+- Neutral tone.
+- Remove fillers, emojis, hashtags, links unless essential.
+- Output exactly one line in the same language as the input.`
 )
 
 // OpenAISummarizer calls OpenAI's Chat Completions API to produce summaries.
@@ -62,11 +62,11 @@ func (s *OpenAISummarizer) Summarize(
 	messages = append(messages, openai.UserMessage(promptBuilder.String()))
 
 	resp, err := s.client.Chat.Completions.New(ctx, openai.ChatCompletionNewParams{
-		Model:               openai.ChatModel("gpt-5.1"),
+		Model:               openai.ChatModelGPT5Mini2025_08_07,
 		Messages:            messages,
 		MaxCompletionTokens: openai.Int(maxCompletionTokens),
 		ServiceTier:         openai.ChatCompletionNewParamsServiceTierFlex,
-		ReasoningEffort:     openai.ReasoningEffort("none"),
+		ReasoningEffort:     openai.ReasoningEffortLow,
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed to do request: %w", err)

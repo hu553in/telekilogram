@@ -206,6 +206,9 @@ func processFoundDocItem(s *goquery.Selection) (channelItem, error) {
 	message := s.ParentsFiltered(".tgme_widget_message").First()
 	message.Find(".tgme_widget_message_text, .tgme_widget_message_caption").Each(
 		func(_ int, inner *goquery.Selection) {
+			inner.Find("br").Each(func(_ int, br *goquery.Selection) {
+				br.ReplaceWithHtml("\n")
+			})
 			fragment := strings.TrimSpace(inner.Text())
 			if fragment == "" {
 				return
