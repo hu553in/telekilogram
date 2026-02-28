@@ -58,3 +58,7 @@ build: install-deps
 .PHONY: clean
 clean:
 	rm -rf $(BUILD_DIR)
+
+.PHONY: sqlc
+sqlc:
+	go run github.com/sqlc-dev/sqlc/cmd/sqlc@latest generate

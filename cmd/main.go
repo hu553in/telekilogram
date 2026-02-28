@@ -34,13 +34,6 @@ func main() {
 
 		return
 	}
-	defer func() {
-		if err = db.Close(); err != nil {
-			log.ErrorContext(ctx, "Failed to close db",
-				"error", err,
-				"dbPath", cfg.DBPath)
-		}
-	}()
 	log.InfoContext(ctx, "DB is initialized",
 		"dbPath", cfg.DBPath)
 

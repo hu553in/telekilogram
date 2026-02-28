@@ -2,9 +2,11 @@ package database
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"strings"
+	dbsql "telekilogram/internal/database/sql"
 	"telekilogram/internal/domain"
 )
 
@@ -24,9 +26,16 @@ func (d *Database) AddFeed(
 		feedTitle = feedURL
 	}
 
-	query := "insert or ignore into feeds (user_id, url, title) values (?, ?, ?)"
-	_, err := d.db.ExecContext(ctx, query, userID, feedURL, feedTitle)
-	return err
+	err := d.q.AddOrIgnoreFeed(ctx, dbsql.AddOrIgnoreFeedParams{
+		UserID: userID,
+		Url:    feedURL,
+		Title:  feedTitle,
+	})
+	if err != nil {
+		return fmt.Errorf("execute query: %w", err)
+	}
+
+	return nil
 }
 
 func (d *Database) UpdateFeedTitle(ctx context.Context, feedID int64, feedTitle string) error {
@@ -35,100 +44,70 @@ func (d *Database) UpdateFeedTitle(ctx context.Context, feedID int64, feedTitle 
 		return errors.New("feed title is empty")
 	}
 
-	query := "update feeds set title = ? where id = ?"
-	_, err := d.db.ExecContext(ctx, query, feedTitle, feedID)
-	return err
+	err := d.q.UpdateFeedTitle(ctx, dbsql.UpdateFeedTitleParams{
+		Title: feedTitle,
+		ID:    feedID,
+	})
+	if err != nil {
+		return fmt.Errorf("execute query: %w", err)
+	}
+
+	return nil
 }
 
 func (d *Database) RemoveFeed(ctx context.Context, feedID int64) error {
-	query := "delete from feeds where id = ?"
-	_, err := d.db.ExecContext(ctx, query, feedID)
-	return err
+	err := d.q.RemoveFeed(ctx, feedID)
+	if err != nil {
+		return fmt.Errorf("execute query: %w", err)
+	}
+
+	return nil
 }
 
 func (d *Database) GetUserFeeds(ctx context.Context, userID int64) ([]domain.UserFeed, error) {
-	query := "select id, url, title from feeds where user_id = ?"
-
-	rows, err := d.db.QueryContext(ctx, query, userID)
+	rows, err := d.q.GetUserFeeds(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("execute query: %w", err)
 	}
-	defer func() {
-		if err = rows.Close(); err != nil {
-			d.log.ErrorContext(ctx, "Failed to close rows",
-				"error", err,
-				"userID", userID,
-				"operation", "GetUserFeeds")
-		}
-	}()
 
 	var feeds []domain.UserFeed
-	for rows.Next() {
+	for _, r := range rows {
 		var f domain.UserFeed
-		if err = rows.Scan(&f.ID, &f.URL, &f.Title); err != nil {
-			return nil, fmt.Errorf("scan row: %w", err)
-		}
 
-		f.URL = strings.TrimSpace(f.URL)
-		f.Title = strings.TrimSpace(f.Title)
+		f.ID = r.ID
+		f.URL = strings.TrimSpace(r.Url)
+		f.Title = strings.TrimSpace(r.Title)
 		f.UserID = userID
 
 		feeds = append(feeds, f)
-	}
-
-	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate rows: %w", err)
 	}
 
 	return feeds, nil
 }
 
 func (d *Database) GetHourFeeds(ctx context.Context, hourUTC int64) ([]domain.UserFeed, error) {
-	var query string
+	var rows []dbsql.Feed
+	var err error
 
 	if hourUTC == 0 {
-		query = `select f.id, f.user_id, f.url, f.title
-from feeds as f
-left join user_settings as us
-on us.user_id = f.user_id
-where us.user_id is null
-or us.auto_digest_hour_utc = ?`
+		rows, err = d.q.GetHourFeedsMidnightUTC(ctx, hourUTC)
 	} else {
-		query = `select f.id, f.user_id, f.url, f.title
-from feeds as f
-left join user_settings as us
-on us.user_id = f.user_id
-where us.auto_digest_hour_utc = ?`
+		rows, err = d.q.GetHourFeeds(ctx, hourUTC)
 	}
-
-	rows, err := d.db.QueryContext(ctx, query, hourUTC)
 	if err != nil {
 		return nil, fmt.Errorf("execute query: %w", err)
 	}
-	defer func() {
-		if err = rows.Close(); err != nil {
-			d.log.ErrorContext(ctx, "Failed to close rows",
-				"error", err,
-				"hourUTC", hourUTC,
-				"operation", "GetHourFeeds")
-		}
-	}()
 
 	var feeds []domain.UserFeed
-	for rows.Next() {
+	for _, r := range rows {
 		var f domain.UserFeed
-		if err = rows.Scan(&f.ID, &f.UserID, &f.URL, &f.Title); err != nil {
-			return nil, fmt.Errorf("scan row: %w", err)
-		}
 
-		f.URL = strings.TrimSpace(f.URL)
-		f.Title = strings.TrimSpace(f.Title)
+		f.ID = r.ID
+		f.URL = strings.TrimSpace(r.Url)
+		f.Title = strings.TrimSpace(r.Title)
+		f.UserID = r.UserID
 
 		feeds = append(feeds, f)
-	}
-
-	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate rows: %w", err)
 	}
 
 	return feeds, nil
@@ -138,51 +117,31 @@ func (d *Database) GetUserSettingsWithDefault(
 	ctx context.Context,
 	userID int64,
 ) (*domain.UserSettings, error) {
-	query := `select user_id, auto_digest_hour_utc
-from user_settings
-where user_id = ?`
-
-	rows, err := d.db.QueryContext(ctx, query, userID)
+	row, err := d.q.GetUserSettings(ctx, userID)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return &domain.UserSettings{
+				UserID:            userID,
+				AutoDigestHourUTC: 0,
+			}, nil
+		}
 		return nil, fmt.Errorf("execute query: %w", err)
 	}
-	defer func() {
-		if err = rows.Close(); err != nil {
-			d.log.ErrorContext(ctx, "Failed to close rows",
-				"error", err,
-				"userID", userID,
-				"operation", "GetUserSettingsWithDefault")
-		}
-	}()
 
-	if !rows.Next() {
-		if err = rows.Err(); err != nil {
-			return nil, fmt.Errorf("iterate rows: %w", err)
-		}
-		return &domain.UserSettings{
-			UserID:            userID,
-			AutoDigestHourUTC: 0,
-		}, nil
-	}
-
-	var us domain.UserSettings
-	if err = rows.Scan(&us.UserID, &us.AutoDigestHourUTC); err != nil {
-		return nil, fmt.Errorf("scan row: %w", err)
-	}
-
-	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate rows: %w", err)
-	}
-
-	return &us, nil
+	return &domain.UserSettings{
+		UserID:            row.UserID,
+		AutoDigestHourUTC: row.AutoDigestHourUtc,
+	}, nil
 }
 
 func (d *Database) UpsertUserSettings(ctx context.Context, userSettings *domain.UserSettings) error {
-	query := `insert into user_settings (user_id, auto_digest_hour_utc)
-values (?, ?)
-on conflict (user_id) do update
-set auto_digest_hour_utc = excluded.auto_digest_hour_utc`
+	err := d.q.UpsertUserSettings(ctx, dbsql.UpsertUserSettingsParams{
+		UserID:            userSettings.UserID,
+		AutoDigestHourUtc: userSettings.AutoDigestHourUTC,
+	})
+	if err != nil {
+		return fmt.Errorf("execute query: %w", err)
+	}
 
-	_, err := d.db.ExecContext(ctx, query, userSettings.UserID, userSettings.AutoDigestHourUTC)
-	return err
+	return nil
 }

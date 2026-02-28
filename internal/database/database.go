@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"log/slog"
 
+	dbsql "telekilogram/internal/database/sql"
+
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/sqlite3"
 	_ "github.com/golang-migrate/migrate/v4/source/file" // Required by the library implementation.
@@ -16,7 +18,7 @@ import (
 )
 
 type Database struct {
-	db  *sql.DB
+	q   *dbsql.Queries
 	log *slog.Logger
 }
 
@@ -69,9 +71,6 @@ func New(ctx context.Context, dbPath string, log *slog.Logger) (*Database, error
 		log.InfoContext(ctx, "DB is migrated", fields...)
 	}
 
-	return &Database{db: dbFile, log: log}, nil
-}
-
-func (d *Database) Close() error {
-	return d.db.Close()
+	q := dbsql.New(dbFile)
+	return &Database{q: q, log: log}, nil
 }

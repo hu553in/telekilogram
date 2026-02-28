@@ -6,5 +6,4 @@ create table if not exists user_settings (
   )
 );
 
-create index if not exists idx_user_settings_auto_digest_hour_utc
-on user_settings (auto_digest_hour_utc);
+create index if not exists idx_user_settings_auto_digest_hour_utc on user_settings (auto_digest_hour_utc);
