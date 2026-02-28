@@ -24,13 +24,13 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	config := config.LoadConfig()
+	cfg := config.LoadConfig()
 
-	db, err := database.New(ctx, config.DBPath, log)
+	db, err := database.New(ctx, cfg.DBPath, log)
 	if err != nil {
 		log.ErrorContext(ctx, "Failed to initialize db",
 			"error", err,
-			"dbPath", config.DBPath)
+			"dbPath", cfg.DBPath)
 
 		return
 	}
@@ -38,25 +38,25 @@ func main() {
 		if err = db.Close(); err != nil {
 			log.ErrorContext(ctx, "Failed to close db",
 				"error", err,
-				"dbPath", config.DBPath)
+				"dbPath", cfg.DBPath)
 		}
 	}()
 	log.InfoContext(ctx, "DB is initialized",
-		"dbPath", config.DBPath)
+		"dbPath", cfg.DBPath)
 
-	summarizer := initOpenAISummarizer(ctx, config.OpenAIAPIKey, log)
+	summarizer := initOpenAISummarizer(ctx, cfg.OpenAIAPIKey, log)
 	fetcher := feed.NewFetcher(db, summarizer, log)
 
-	botInst, err := bot.New(config.Token, db, fetcher, config.AllowedUsers, log)
+	botInst, err := bot.New(cfg.Token, db, fetcher, cfg.AllowedUsers, log)
 	if err != nil {
 		log.ErrorContext(ctx, "Failed to initialize bot",
 			"error", err,
-			"allowedUsersCount", len(config.AllowedUsers))
+			"allowedUsersCount", len(cfg.AllowedUsers))
 
 		return
 	}
 	log.InfoContext(ctx, "Bot is initialized",
-		"allowedUsersCount", len(config.AllowedUsers))
+		"allowedUsersCount", len(cfg.AllowedUsers))
 
 	sched := scheduler.New(ctx, botInst, fetcher, log)
 

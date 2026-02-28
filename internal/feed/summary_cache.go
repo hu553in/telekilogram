@@ -58,7 +58,6 @@ func (c *telegramSummaryCache) get(key string, now time.Time) (string, bool) {
 	}
 
 	c.order.MoveToFront(elem)
-
 	return entry.summary, true
 }
 
@@ -88,7 +87,6 @@ func (c *telegramSummaryCache) set(
 		entry.summary = summary
 		entry.expiresAt = expiresAt
 		c.order.MoveToFront(elem)
-
 		return
 	}
 

@@ -16,7 +16,7 @@ But you can use awesome [siftrss](https://siftrss.com/) instead\! ✨
 It's totally great\. Bot author is also using it\.`
 
 func (b *Bot) handleMessage(ctx context.Context, message *tgbotapi.Message) error {
-	return b.withSpinner(message.Chat.ID, func() error {
+	return b.withSpinner(ctx, message.Chat.ID, func() error {
 		if message.ForwardFromChat != nil && // If message is forwarded...
 			message.ForwardFromChat.Type == "channel" && // ...from channel...
 			message.ForwardFromChat.UserName != "" { // ...with public user name.
@@ -52,12 +52,12 @@ func (b *Bot) handleRandomText(
 ) error {
 	text = strings.TrimSpace(text)
 
-	feeds, err := feed.FindValidFeeds(ctx, text, b.log)
+	feeds, err := b.fetcher.FindValidFeeds(ctx, text)
 
 	if len(feeds) == 0 {
 		var errs []error
 		if err != nil {
-			errs = append(errs, fmt.Errorf("failed to find valid feeds: %w", err))
+			errs = append(errs, fmt.Errorf("find valid feeds: %w", err))
 		}
 
 		sendErr := b.sendMessageWithKeyboard(
@@ -66,7 +66,7 @@ func (b *Bot) handleRandomText(
 			b.returnKeyboard,
 		)
 		if sendErr != nil {
-			errs = append(errs, fmt.Errorf("failed to send message with keyboard: %w", sendErr))
+			errs = append(errs, fmt.Errorf("send message with keyboard: %w", sendErr))
 		}
 
 		return errors.Join(errs...)
@@ -74,13 +74,13 @@ func (b *Bot) handleRandomText(
 
 	var errs []error
 	if err != nil {
-		errs = append(errs, fmt.Errorf("failed to find valid feeds: %w", err))
+		errs = append(errs, fmt.Errorf("find valid feeds: %w", err))
 	}
 
 	added := 0
 	for _, feed := range feeds {
 		if err = b.db.AddFeed(ctx, userID, feed.URL, feed.Title); err != nil {
-			errs = append(errs, fmt.Errorf("failed to add feed: %w", err))
+			errs = append(errs, fmt.Errorf("add feed: %w", err))
 		} else {
 			added++
 		}
@@ -88,7 +88,7 @@ func (b *Bot) handleRandomText(
 
 	if added == 0 {
 		if err = b.sendMessageWithKeyboard(message.Chat.ID, "❌ Failed\\.", b.returnKeyboard); err != nil {
-			errs = append(errs, fmt.Errorf("failed to send message with keyboard: %w", err))
+			errs = append(errs, fmt.Errorf("send message with keyboard: %w", err))
 
 			return errors.Join(errs...)
 		}
@@ -100,15 +100,14 @@ func (b *Bot) handleRandomText(
 			fmt.Sprintf("⚠️ Partial success \\(%d added\\)\\.", added),
 			b.returnKeyboard,
 		); err != nil {
-			errs = append(errs, fmt.Errorf("failed to send message with keyboard: %w", err))
-
+			errs = append(errs, fmt.Errorf("send message with keyboard: %w", err))
 			return errors.Join(errs...)
 		}
 	}
 
 	err = b.sendMessageWithKeyboard(message.Chat.ID, "✅ Success\\.", b.returnKeyboard)
 	if err != nil {
-		return fmt.Errorf("failed to send message with keyboard: %w", err)
+		return fmt.Errorf("send message with keyboard: %w", err)
 	}
 
 	return nil
@@ -142,11 +141,11 @@ func (b *Bot) handleForwardedChannel(
 	}
 
 	if err := b.db.AddFeed(ctx, userID, canonicalURL, title); err != nil {
-		errs := []error{fmt.Errorf("failed to add feed: %w", err)}
+		errs := []error{fmt.Errorf("add feed: %w", err)}
 
 		sendErr := b.sendMessageWithKeyboard(chatID, "❌ Failed\\.", b.returnKeyboard)
 		if sendErr != nil {
-			errs = append(errs, fmt.Errorf("failed to send message with keyboard: %w", sendErr))
+			errs = append(errs, fmt.Errorf("send message with keyboard: %w", sendErr))
 		}
 
 		return errors.Join(errs...)

@@ -4,8 +4,8 @@ import (
 	"context"
 	"log/slog"
 	"telekilogram/internal/bot"
+	"telekilogram/internal/domain"
 	"telekilogram/internal/feed"
-	"telekilogram/internal/models"
 	"time"
 
 	"github.com/robfig/cron/v3"
@@ -92,7 +92,7 @@ func (s *Scheduler) checkHourFeeds() {
 	}
 }
 
-func feedIDs(posts []models.Post) []int64 {
+func feedIDs(posts []domain.Post) []int64 {
 	seen := make(map[int64]struct{})
 	var ids []int64
 

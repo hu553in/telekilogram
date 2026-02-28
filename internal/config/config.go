@@ -10,7 +10,5 @@ type Config struct {
 }
 
 func LoadConfig() Config {
-	var cfg Config
-	env.Must(cfg, env.Parse(&cfg))
-	return cfg
+	return env.Must(env.ParseAs[Config]())
 }

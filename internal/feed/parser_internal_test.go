@@ -24,14 +24,12 @@ func (s *stubSummarizer) Summarize(
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.calls++
-
 	return s.summary, nil
 }
 
 func (s *stubSummarizer) callCount() int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-
 	return s.calls
 }
 
@@ -47,14 +45,12 @@ func (s *echoCountingSummarizer) Summarize(
 	s.mu.Lock()
 	s.calls++
 	s.mu.Unlock()
-
 	return input.Text, nil
 }
 
 func (s *echoCountingSummarizer) callCount() int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-
 	return s.calls
 }
 
@@ -75,13 +71,13 @@ func TestTelegramSummaryCacheKey(t *testing.T) {
 	}
 }
 
-func TestFeedParserSummarizeTelegramPostUsesCache(t *testing.T) {
+func TestParserSummarizeTelegramPostUsesCache(t *testing.T) {
 	stub := &stubSummarizer{summary: "cached summary"}
-	parser := NewParser(nil, stub, slog.Default())
+	parser := NewParser(nil, stub, nil, nil, slog.Default())
 
 	item := channelItem{
 		URL:       "https://t.me/example/123",
-		Text:      "Example post text",
+		text:      "Example post text",
 		published: time.Now().UTC(),
 	}
 
@@ -103,13 +99,13 @@ func TestFeedParserSummarizeTelegramPostUsesCache(t *testing.T) {
 	}
 }
 
-func TestFeedParserSummarizeTelegramPostEditedTextBypassesCache(t *testing.T) {
+func TestParserSummarizeTelegramPostEditedTextBypassesCache(t *testing.T) {
 	stub := &stubSummarizer{summary: "original summary"}
-	parser := NewParser(nil, stub, slog.Default())
+	parser := NewParser(nil, stub, nil, nil, slog.Default())
 
 	item := channelItem{
 		URL:       "https://t.me/example/123",
-		Text:      "Example post text",
+		text:      "Example post text",
 		published: time.Now().UTC(),
 	}
 
@@ -125,7 +121,7 @@ func TestFeedParserSummarizeTelegramPostEditedTextBypassesCache(t *testing.T) {
 
 	stub.summary = editedSummary
 	edited := item
-	edited.Text = "Example post text (edited)"
+	edited.text = "Example post text (edited)"
 
 	if summary := parser.summarizeTelegramPost(ctx, edited); summary != editedSummary {
 		t.Fatalf("unexpected edited summary: %q", summary)
@@ -145,22 +141,22 @@ func TestFeedParserSummarizeTelegramPostEditedTextBypassesCache(t *testing.T) {
 	}
 }
 
-func TestFeedParserSummarizeTelegramPostsPreservesOrder(t *testing.T) {
+func TestParserSummarizeTelegramPostsPreservesOrder(t *testing.T) {
 	echo := &echoCountingSummarizer{}
-	parser := NewParser(nil, echo, slog.Default())
+	parser := NewParser(nil, echo, nil, nil, slog.Default())
 
 	candidates := []telegramSummarizationCandidate{
 		{
 			postIndex: 2,
-			item:      channelItem{URL: "https://t.me/example/3", Text: "third"},
+			item:      channelItem{URL: "https://t.me/example/3", text: "third"},
 		},
 		{
 			postIndex: 0,
-			item:      channelItem{URL: "https://t.me/example/1", Text: "first"},
+			item:      channelItem{URL: "https://t.me/example/1", text: "first"},
 		},
 		{
 			postIndex: 1,
-			item:      channelItem{URL: "https://t.me/example/2", Text: "second"},
+			item:      channelItem{URL: "https://t.me/example/2", text: "second"},
 		},
 	}
 

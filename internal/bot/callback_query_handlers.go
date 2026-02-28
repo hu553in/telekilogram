@@ -2,16 +2,17 @@ package bot
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
-	"telekilogram/internal/models"
+	"telekilogram/internal/domain"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 func (b *Bot) handleCallbackQuery(ctx context.Context, callback *tgbotapi.CallbackQuery) error {
-	return b.withSpinner(callback.Message.Chat.ID, func() error {
+	return b.withSpinner(ctx, callback.Message.Chat.ID, func() error {
 		data := strings.TrimSpace(callback.Data)
 
 		switch data {
@@ -50,19 +51,47 @@ func (b *Bot) handleSettingsAutoDigestHourUTCQuery(
 
 	hourUTC, err := strconv.ParseInt(hourUTCStr, 10, 64)
 	if err != nil {
-		return b.errorCallbackAnswer(callback, fmt.Errorf("failed to parse hourUTC: %w", err))
+		return b.errorCallbackAnswer(callback, fmt.Errorf("parse hourUTC: %w", err))
 	}
 
-	if err = b.db.UpsertUserSettings(ctx, &models.UserSettings{
+	if err = b.db.UpsertUserSettings(ctx, &domain.UserSettings{
 		UserID:            callback.From.ID,
 		AutoDigestHourUTC: hourUTC,
 	}); err != nil {
-		return b.errorCallbackAnswer(callback, fmt.Errorf("failed to upsert user settings: %w", err))
+		return b.errorCallbackAnswer(callback, fmt.Errorf("upsert user settings: %w", err))
 	}
 
 	if _, err = b.rateLimiter.Request(tgbotapi.NewCallback(callback.ID, "✅ Settings are updated.")); err != nil {
-		return fmt.Errorf("failed to send request: %w", err)
+		return fmt.Errorf("send request: %w", err)
 	}
 
 	return b.handleSettingsCommand(ctx, callback.Message.Chat.ID, callback.From.ID)
+}
+
+func (b *Bot) withEmptyCallbackAnswer(
+	callback *tgbotapi.CallbackQuery,
+	fn func() error,
+) error {
+	var errs []error
+
+	if _, err := b.rateLimiter.Request(tgbotapi.NewCallback(callback.ID, "")); err != nil {
+		errs = append(errs, b.errorCallbackAnswer(callback, fmt.Errorf("send request: %w", err)))
+	}
+
+	err := fn()
+	if err != nil {
+		errs = append(errs, fmt.Errorf("call fn: %w", err))
+	}
+
+	return errors.Join(errs...)
+}
+
+func (b *Bot) errorCallbackAnswer(
+	callback *tgbotapi.CallbackQuery,
+	err error,
+) error {
+	if _, sendErr := b.rateLimiter.Request(tgbotapi.NewCallback(callback.ID, "❌ Failed.")); sendErr != nil {
+		return errors.Join(err, fmt.Errorf("send request: %w", sendErr))
+	}
+	return err
 }

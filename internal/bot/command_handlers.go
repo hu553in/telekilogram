@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"telekilogram/internal/markdown"
 	"time"
 )
 
@@ -58,29 +57,29 @@ func (b *Bot) handleUnfollowDeepLink(
 
 	feedID, err := strconv.ParseInt(feedIDStr, 10, 64)
 	if err != nil {
-		errs := []error{fmt.Errorf("failed to parse feedID: %w", err)}
+		errs := []error{fmt.Errorf("parse feedID: %w", err)}
 
 		sendErr := b.sendMessageWithKeyboard(chatID, "❌ Failed\\.", b.returnKeyboard)
 		if sendErr != nil {
-			errs = append(errs, fmt.Errorf("failed to send message with keyboard: %w", sendErr))
+			errs = append(errs, fmt.Errorf("send message with keyboard: %w", sendErr))
 		}
 
 		return errors.Join(errs...)
 	}
 
 	if err = b.db.RemoveFeed(ctx, feedID); err != nil {
-		errs := []error{fmt.Errorf("failed to remove feed: %w", err)}
+		errs := []error{fmt.Errorf("remove feed: %w", err)}
 
 		sendErr := b.sendMessageWithKeyboard(chatID, "❌ Failed\\.", b.returnKeyboard)
 		if sendErr != nil {
-			errs = append(errs, fmt.Errorf("failed to send message with keyboard: %w", sendErr))
+			errs = append(errs, fmt.Errorf("send message with keyboard: %w", sendErr))
 		}
 
 		return errors.Join(errs...)
 	}
 
 	if err = b.sendMessageWithKeyboard(chatID, "✅ Feed is removed\\.", b.returnKeyboard); err != nil {
-		return fmt.Errorf("failed to send message with keyboard: %w", err)
+		return fmt.Errorf("send message with keyboard: %w", err)
 	}
 
 	return b.handleListCommand(ctx, chatID, userID)
@@ -92,12 +91,12 @@ func (b *Bot) handleListCommand(ctx context.Context, chatID int64, userID int64)
 	if len(feeds) == 0 {
 		var errs []error
 		if err != nil {
-			errs = append(errs, fmt.Errorf("failed to get user feeds: %w", err))
+			errs = append(errs, fmt.Errorf("get user feeds: %w", err))
 		}
 
 		sendErr := b.sendMessageWithKeyboard(chatID, "✖️ Feed list is empty or there is a bug\\.", b.returnKeyboard)
 		if sendErr != nil {
-			errs = append(errs, fmt.Errorf("failed to send message with keyboard: %w", sendErr))
+			errs = append(errs, fmt.Errorf("send message with keyboard: %w", sendErr))
 		}
 
 		return errors.Join(errs...)
@@ -105,7 +104,7 @@ func (b *Bot) handleListCommand(ctx context.Context, chatID int64, userID int64)
 
 	var errs []error
 	if err != nil {
-		errs = append(errs, fmt.Errorf("failed to get user feeds: %w", err))
+		errs = append(errs, fmt.Errorf("get user feeds: %w", err))
 	}
 
 	var message strings.Builder
@@ -113,7 +112,7 @@ func (b *Bot) handleListCommand(ctx context.Context, chatID int64, userID int64)
 
 	botInfo, botInfoErr := b.api.GetMe()
 	if botInfoErr != nil {
-		errs = append(errs, fmt.Errorf("failed to get bot info: %w", botInfoErr))
+		errs = append(errs, fmt.Errorf("get bot info: %w", botInfoErr))
 	}
 
 	for i, f := range feeds {
@@ -132,18 +131,18 @@ func (b *Bot) handleListCommand(ctx context.Context, chatID int64, userID int64)
 				&message,
 				"%d\\. [%s](%s) \\[[unfollow](https://t\\.me/%s?start=unfollow_%d)\\]\n",
 				i+1,
-				markdown.EscapeV2(title),
+				escapeMarkdownV2(title),
 				url,
 				botInfo.UserName,
 				f.ID,
 			)
 		} else {
-			fmt.Fprintf(&message, "%d\\. [%s](%s)\n", i+1, markdown.EscapeV2(title), url)
+			fmt.Fprintf(&message, "%d\\. [%s](%s)\n", i+1, escapeMarkdownV2(title), url)
 		}
 	}
 
 	if err = b.sendMessageWithKeyboard(chatID, message.String(), b.returnKeyboard); err != nil {
-		errs = append(errs, fmt.Errorf("failed to send message with keyboard: %w", err))
+		errs = append(errs, fmt.Errorf("send message with keyboard: %w", err))
 	}
 
 	return errors.Join(errs...)
@@ -159,12 +158,12 @@ func (b *Bot) handleDigestCommand(ctx context.Context, chatID int64, userID int6
 	if len(userPosts) == 0 {
 		var errs []error
 		if err != nil {
-			errs = append(errs, fmt.Errorf("failed to fetch user feeds: %w", err))
+			errs = append(errs, fmt.Errorf("fetch user feeds: %w", err))
 		}
 
 		sendErr := b.sendMessageWithKeyboard(chatID, "✖️ Feed list is empty or there is a bug\\.", b.returnKeyboard)
 		if sendErr != nil {
-			errs = append(errs, fmt.Errorf("failed to send message with keyboard: %w", sendErr))
+			errs = append(errs, fmt.Errorf("send message with keyboard: %w", sendErr))
 		}
 
 		return errors.Join(errs...)
@@ -172,12 +171,12 @@ func (b *Bot) handleDigestCommand(ctx context.Context, chatID int64, userID int6
 
 	var errs []error
 	if err != nil {
-		errs = append(errs, fmt.Errorf("failed to fetch user feeds: %w", err))
+		errs = append(errs, fmt.Errorf("fetch user feeds: %w", err))
 	}
 
 	for _, posts := range userPosts {
 		if err = b.SendNewPosts(ctx, chatID, posts); err != nil {
-			errs = append(errs, fmt.Errorf("failed to send new posts: %w", err))
+			errs = append(errs, fmt.Errorf("send new posts: %w", err))
 		}
 	}
 
@@ -187,11 +186,11 @@ func (b *Bot) handleDigestCommand(ctx context.Context, chatID int64, userID int6
 func (b *Bot) handleSettingsCommand(ctx context.Context, chatID int64, userID int64) error {
 	settings, err := b.db.GetUserSettingsWithDefault(ctx, userID)
 	if err != nil {
-		errs := []error{fmt.Errorf("failed to get user settings with default: %w", err)}
+		errs := []error{fmt.Errorf("get user settings with default: %w", err)}
 
 		sendErr := b.sendMessageWithKeyboard(chatID, "❌ Failed\\.", b.returnKeyboard)
 		if sendErr != nil {
-			errs = append(errs, fmt.Errorf("failed to send message with keyboard: %w", sendErr))
+			errs = append(errs, fmt.Errorf("send message with keyboard: %w", sendErr))
 		}
 
 		return errors.Join(errs...)
@@ -210,7 +209,7 @@ func (b *Bot) handleSettingsCommand(ctx context.Context, chatID int64, userID in
 		fmt.Sprintf(settingsText, currentUTC, hourUTCStr),
 		b.settingsAutoDigestHourUTCKeyboard,
 	); err != nil {
-		return fmt.Errorf("failed to send message with keyboard: %w", err)
+		return fmt.Errorf("send message with keyboard: %w", err)
 	}
 
 	return nil

@@ -45,7 +45,7 @@ func (s *OpenAISummarizer) Summarize(
 ) (string, error) {
 	text := strings.TrimSpace(input.Text)
 	if text == "" {
-		return "", errors.New("input is required")
+		return "", errors.New("input is empty")
 	}
 
 	userPromptBuilder := strings.Builder{}
@@ -72,7 +72,7 @@ func (s *OpenAISummarizer) Summarize(
 			},
 		})
 		if err != nil {
-			return "", fmt.Errorf("failed to do request: %w", err)
+			return "", fmt.Errorf("do request: %w", err)
 		}
 
 		if resp.Status == "incomplete" {

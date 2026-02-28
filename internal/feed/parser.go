@@ -6,10 +6,11 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"strings"
 	"sync"
 	"telekilogram/internal/database"
-	"telekilogram/internal/models"
+	"telekilogram/internal/domain"
 	"telekilogram/internal/summarizer"
 	"time"
 
@@ -28,58 +29,64 @@ type telegramSummarizationCandidate struct {
 }
 
 type Parser struct {
-	db           *database.Database
-	summarizer   summarizer.Summarizer
-	summaryCache *telegramSummaryCache
-	log          *slog.Logger
+	db             *database.Database
+	summarizer     summarizer.Summarizer
+	summaryCache   *telegramSummaryCache
+	libParser      *gofeed.Parser
+	telegramClient *http.Client
+	log            *slog.Logger
 }
 
 func NewParser(
 	db *database.Database,
 	s summarizer.Summarizer,
+	libParser *gofeed.Parser,
+	telegramClient *http.Client,
 	log *slog.Logger,
 ) *Parser {
 	return &Parser{
-		db:           db,
-		summarizer:   s,
-		summaryCache: newTelegramSummaryCache(telegramSummaryCacheMaxEntries),
-		log:          log,
+		db:             db,
+		summarizer:     s,
+		summaryCache:   newTelegramSummaryCache(telegramSummaryCacheMaxEntries),
+		libParser:      libParser,
+		telegramClient: telegramClient,
+		log:            log,
 	}
 }
 
-func (fp *Parser) ParseFeed(
+func (p *Parser) ParseFeed(
 	ctx context.Context,
-	feed *models.UserFeed,
-) ([]models.Post, error) {
+	feed *domain.UserFeed,
+) ([]domain.Post, error) {
 	normalizedFeedURL := strings.TrimSpace(feed.URL)
 	normalizedFeedTitle := strings.TrimSpace(feed.Title)
 
 	if ok, slug := isTelegramChannelURL(normalizedFeedURL); ok {
-		return fp.parseTelegramChannelFeed(ctx, feed, slug, normalizedFeedTitle)
+		return p.parseTelegramChannelFeed(ctx, feed, slug, normalizedFeedTitle)
 	}
 
-	parsed, err := libParser.ParseURLWithContext(normalizedFeedURL, ctx)
+	parsed, err := p.libParser.ParseURLWithContext(normalizedFeedURL, ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse feed (URL = %s): %w", normalizedFeedURL, err)
+		return nil, fmt.Errorf("parse feed (URL = %s): %w", normalizedFeedURL, err)
 	}
 
 	parsedTitle := strings.TrimSpace(parsed.Title)
 
 	var updateTitleErr error
 	if parsedTitle != "" && parsedTitle != normalizedFeedTitle {
-		if err = fp.db.UpdateFeedTitle(ctx, feed.ID, parsedTitle); err != nil {
-			updateTitleErr = fmt.Errorf("failed to update feed title: %w", err)
+		if err = p.db.UpdateFeedTitle(ctx, feed.ID, parsedTitle); err != nil {
+			updateTitleErr = fmt.Errorf("update feed title: %w", err)
 		} else {
 			normalizedFeedTitle = parsedTitle
 		}
 	}
 
-	var newPosts []models.Post
+	var newPosts []domain.Post
 	now := time.Now().Round(time.Hour)
 	cutoffTime := now.Add(-24*time.Hour - parseFeedGracePeriod)
 
 	for _, item := range parsed.Items {
-		post, ok := fp.parseFeedItem(
+		post, ok := p.parseFeedItem(
 			ctx,
 			now,
 			cutoffTime,
@@ -99,7 +106,7 @@ func (fp *Parser) ParseFeed(
 	return newPosts, updateTitleErr
 }
 
-func (fp *Parser) parseFeedItem(
+func (p *Parser) parseFeedItem(
 	ctx context.Context,
 	now time.Time,
 	cutoffTime time.Time,
@@ -108,7 +115,7 @@ func (fp *Parser) parseFeedItem(
 	parsedTitle string,
 	feedID int64,
 	item *gofeed.Item,
-) (models.Post, bool) {
+) (domain.Post, bool) {
 	publishedTime := now
 
 	if item.PublishedParsed != nil {
@@ -129,15 +136,15 @@ func (fp *Parser) parseFeedItem(
 		}
 
 		if postURL == "" {
-			fp.log.WarnContext(ctx, "Skipping feed item with empty URL",
+			p.log.WarnContext(ctx, "Skipping feed item with empty URL",
 				"feedURL", normalizedFeedURL,
 				"feedTitle", feedTitle,
 				"itemTitle", postTitle)
 
-			return models.Post{}, false
+			return domain.Post{}, false
 		}
 
-		return models.Post{
+		return domain.Post{
 			Title:     postTitle,
 			URL:       postURL,
 			FeedID:    feedID,
@@ -146,40 +153,40 @@ func (fp *Parser) parseFeedItem(
 		}, true
 	}
 
-	return models.Post{}, false
+	return domain.Post{}, false
 }
 
-func (fp *Parser) parseTelegramChannelFeed(
+func (p *Parser) parseTelegramChannelFeed(
 	ctx context.Context,
-	feed *models.UserFeed,
+	feed *domain.UserFeed,
 	slug string,
 	normalizedFeedTitle string,
-) ([]models.Post, error) {
-	items, channelTitle, err := fetchTelegramChannelPosts(ctx, slug, fp.log)
+) ([]domain.Post, error) {
+	items, channelTitle, err := p.fetchTelegramChannelPosts(ctx, slug)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch Telegram channel items: %w", err)
+		return nil, fmt.Errorf("fetch Telegram channel items: %w", err)
 	}
 
 	channelTitle = strings.TrimSpace(channelTitle)
 
 	var updateTitleErr error
 	if channelTitle != "" && channelTitle != normalizedFeedTitle {
-		if err = fp.db.UpdateFeedTitle(ctx, feed.ID, channelTitle); err != nil {
-			updateTitleErr = fmt.Errorf("failed to update feed title: %w", err)
+		if err = p.db.UpdateFeedTitle(ctx, feed.ID, channelTitle); err != nil {
+			updateTitleErr = fmt.Errorf("update feed title: %w", err)
 		} else {
 			normalizedFeedTitle = channelTitle
 		}
 	}
 
 	var (
-		newPosts     []models.Post
+		newPosts     []domain.Post
 		now          = time.Now().Round(time.Hour)
 		cutoffTime   = now.Add(-24*time.Hour - parseFeedGracePeriod)
 		candidates   []telegramSummarizationCandidate
 		canonicalURL = TelegramChannelCanonicalURL(slug)
 	)
 	if canonicalURL == "" {
-		return nil, fmt.Errorf("failed to build canonical URL (slug = %s)", slug)
+		return nil, fmt.Errorf("build canonical URL (slug = %s)", slug)
 	}
 
 	feedTitle := channelTitle
@@ -192,7 +199,7 @@ func (fp *Parser) parseTelegramChannelFeed(
 	feedTitle = strings.TrimSpace(feedTitle)
 
 	for _, it := range items {
-		post, candidate, ok := fp.parseTelegramChannelPost(
+		post, candidate, ok := p.parseTelegramChannelPost(
 			ctx,
 			now,
 			cutoffTime,
@@ -212,7 +219,7 @@ func (fp *Parser) parseTelegramChannelFeed(
 	}
 
 	if len(candidates) > 0 {
-		summaries := fp.summarizeTelegramPosts(ctx, candidates)
+		summaries := p.summarizeTelegramPosts(ctx, candidates)
 		for i := range candidates {
 			candidate := candidates[i]
 			if candidate.postIndex >= 0 && candidate.postIndex < len(newPosts) {
@@ -224,7 +231,7 @@ func (fp *Parser) parseTelegramChannelFeed(
 	return newPosts, updateTitleErr
 }
 
-func (fp *Parser) parseTelegramChannelPost(
+func (p *Parser) parseTelegramChannelPost(
 	ctx context.Context,
 	now time.Time,
 	cutoffTime time.Time,
@@ -234,7 +241,7 @@ func (fp *Parser) parseTelegramChannelPost(
 	processedPostCount int,
 	feedID int64,
 	feedTitle string,
-) (models.Post, telegramSummarizationCandidate, bool) {
+) (domain.Post, telegramSummarizationCandidate, bool) {
 	publishedTime := item.published
 
 	if publishedTime.IsZero() {
@@ -244,14 +251,14 @@ func (fp *Parser) parseTelegramChannelPost(
 	if publishedTime.After(cutoffTime) {
 		postURL := strings.TrimSpace(item.URL)
 		if postURL == "" {
-			fp.log.WarnContext(ctx, "Skipping Telegram post with empty URL",
+			p.log.WarnContext(ctx, "Skipping Telegram post with empty URL",
 				"canonicalFeedURL", canonicalURL,
 				"slug", slug)
 
-			return models.Post{}, telegramSummarizationCandidate{}, false
+			return domain.Post{}, telegramSummarizationCandidate{}, false
 		}
 
-		return models.Post{
+		return domain.Post{
 			URL:       postURL,
 			FeedID:    feedID,
 			FeedTitle: feedTitle,
@@ -259,10 +266,10 @@ func (fp *Parser) parseTelegramChannelPost(
 		}, telegramSummarizationCandidate{postIndex: processedPostCount, item: item}, true
 	}
 
-	return models.Post{}, telegramSummarizationCandidate{}, false
+	return domain.Post{}, telegramSummarizationCandidate{}, false
 }
 
-func (fp *Parser) summarizeTelegramPosts(
+func (p *Parser) summarizeTelegramPosts(
 	ctx context.Context,
 	candidates []telegramSummarizationCandidate,
 ) []string {
@@ -290,7 +297,7 @@ func (fp *Parser) summarizeTelegramPosts(
 	for range workerCount {
 		wg.Go(func() {
 			for t := range tasks {
-				summaries[t.resultIndex] = fp.summarizeTelegramPost(ctx, t.candidate.item)
+				summaries[t.resultIndex] = p.summarizeTelegramPost(ctx, t.candidate.item)
 			}
 		})
 	}
@@ -308,11 +315,11 @@ func (fp *Parser) summarizeTelegramPosts(
 	return summaries
 }
 
-func (fp *Parser) summarizeTelegramPost(
+func (p *Parser) summarizeTelegramPost(
 	ctx context.Context,
 	item channelItem,
 ) string {
-	text := strings.TrimSpace(item.Text)
+	text := strings.TrimSpace(item.text)
 	if text == "" {
 		return item.URL
 	}
@@ -320,22 +327,22 @@ func (fp *Parser) summarizeTelegramPost(
 	now := time.Now().UTC()
 	cacheKey := telegramSummaryCacheKey(item.URL, text)
 
-	if cacheKey != "" && fp.summaryCache != nil {
-		if summary, ok := fp.summaryCache.get(cacheKey, now); ok {
+	if cacheKey != "" && p.summaryCache != nil {
+		if summary, ok := p.summaryCache.get(cacheKey, now); ok {
 			return summary
 		}
 	}
 
-	if fp.summarizer == nil {
+	if p.summarizer == nil {
 		return fallbackTelegramSummary(text, item.URL)
 	}
 
-	summary, err := fp.summarizer.Summarize(ctx, summarizer.Input{
+	summary, err := p.summarizer.Summarize(ctx, summarizer.Input{
 		Text:      text,
 		SourceURL: item.URL,
 	})
 	if err != nil {
-		fp.log.ErrorContext(ctx, "Failed to summarize Telegram channel post",
+		p.log.ErrorContext(ctx, "Failed to summarize Telegram channel post",
 			"error", err,
 			"url", item.URL,
 			"fallback", true,
@@ -356,8 +363,8 @@ func (fp *Parser) summarizeTelegramPost(
 	}
 
 	expiresAt := published.Add(24*time.Hour + parseFeedGracePeriod)
-	if expiresAt.After(now) && cacheKey != "" && fp.summaryCache != nil {
-		fp.summaryCache.set(cacheKey, summary, expiresAt, now)
+	if expiresAt.After(now) && cacheKey != "" && p.summaryCache != nil {
+		p.summaryCache.set(cacheKey, summary, expiresAt, now)
 	}
 
 	return summary
@@ -375,7 +382,6 @@ func telegramSummaryCacheKey(rawURL string, text string) string {
 	}
 
 	hash := sha256.Sum256([]byte(normalizedText))
-
 	return canonicalURL + "|" + hex.EncodeToString(hash[:])
 }
 

@@ -6,27 +6,31 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 	"time"
-
-	"log/slog"
 
 	"github.com/PuerkitoBio/goquery"
 )
 
 const (
-	minPartsForTelegramChannelSlugStartingWithS = 2
-	telegramClientTimeout                       = 20 * time.Second
-	userAgent                                   = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
+	userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
 		"AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36"
+
+	minPartsForTelegramChannelSlugStartingWithS = 2
+	minPartsForTelegramChannelAtSignSlug        = 3
+
+	telegramHost = "t.me"
 )
 
-//nolint:gochecknoglobals // TODO: Client must be created not as global variable.
-var telegramClient = &http.Client{Timeout: telegramClientTimeout}
+var (
+	telegramSlugRe       = regexp.MustCompile(`^\w{5,32}$`)
+	telegramAtSignSlugRe = regexp.MustCompile(`(\s|^)@(\w{5,32})(\s|$)`)
+)
 
 type channelItem struct {
 	URL       string
-	Text      string
+	text      string
 	published time.Time
 }
 
@@ -45,6 +49,15 @@ func TelegramMessageCanonicalURL(raw string) string {
 	u.Fragment = ""
 
 	return u.String()
+}
+
+func TelegramChannelCanonicalURL(slug string) string {
+	slug = strings.TrimSpace(slug)
+	if slug == "" {
+		return ""
+	}
+
+	return fmt.Sprintf("https://%s/s/%s", telegramHost, slug)
 }
 
 func isTelegramChannelURL(raw string) (bool, string) {
@@ -89,7 +102,10 @@ func isTelegramChannelURL(raw string) (bool, string) {
 	return true, slug
 }
 
-func fetchTelegramChannelTitle(ctx context.Context, slug string, log *slog.Logger) (string, error) {
+func (f *Fetcher) fetchTelegramChannelTitle(
+	ctx context.Context,
+	slug string,
+) (string, error) {
 	canonicalURL := TelegramChannelCanonicalURL(slug)
 	if canonicalURL == "" {
 		return "", errors.New("slug is empty")
@@ -97,18 +113,18 @@ func fetchTelegramChannelTitle(ctx context.Context, slug string, log *slog.Logge
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, canonicalURL, nil)
 	if err != nil {
-		return "", fmt.Errorf("failed to create request: %w", err)
+		return "", fmt.Errorf("create request: %w", err)
 	}
 
 	req.Header.Set("User-Agent", userAgent)
 
-	resp, err := telegramClient.Do(req) //nolint:gosec // Telegram URL
+	resp, err := f.telegramClient.Do(req) //nolint:gosec // Telegram URL
 	if err != nil {
-		return "", fmt.Errorf("failed to do request: %w", err)
+		return "", fmt.Errorf("do request: %w", err)
 	}
 	defer func() {
 		if err = resp.Body.Close(); err != nil {
-			log.ErrorContext(ctx, "Failed to close response body",
+			f.log.ErrorContext(ctx, "Failed to close response body",
 				"error", err,
 				"canonicalURL", canonicalURL,
 				"operation", "fetchTelegramChannelTitle",
@@ -117,12 +133,12 @@ func fetchTelegramChannelTitle(ctx context.Context, slug string, log *slog.Logge
 	}()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("failed to do request: unexpected status: %d", resp.StatusCode)
+		return "", fmt.Errorf("do request: unexpected status: %d", resp.StatusCode)
 	}
 
 	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	if err != nil {
-		return "", fmt.Errorf("failed to create document from reader: %w", err)
+		return "", fmt.Errorf("create document from reader: %w", err)
 	}
 
 	if content, ok := doc.Find("meta[property='og:title']").Attr("content"); ok {
@@ -132,7 +148,10 @@ func fetchTelegramChannelTitle(ctx context.Context, slug string, log *slog.Logge
 	return strings.TrimSpace(doc.Find(".tgme_channel_info_header_title > span").Text()), nil
 }
 
-func fetchTelegramChannelPosts(ctx context.Context, slug string, log *slog.Logger) ([]channelItem, string, error) {
+func (p *Parser) fetchTelegramChannelPosts(
+	ctx context.Context,
+	slug string,
+) ([]channelItem, string, error) {
 	canonicalURL := TelegramChannelCanonicalURL(slug)
 	if canonicalURL == "" {
 		return nil, "", errors.New("slug is empty")
@@ -140,18 +159,18 @@ func fetchTelegramChannelPosts(ctx context.Context, slug string, log *slog.Logge
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, canonicalURL, nil)
 	if err != nil {
-		return nil, "", fmt.Errorf("failed to create request: %w", err)
+		return nil, "", fmt.Errorf("create request: %w", err)
 	}
 
 	req.Header.Set("User-Agent", userAgent)
 
-	resp, err := telegramClient.Do(req) //nolint:gosec // Telegram URL
+	resp, err := p.telegramClient.Do(req) //nolint:gosec // Telegram URL
 	if err != nil {
-		return nil, "", fmt.Errorf("failed to do request: %w", err)
+		return nil, "", fmt.Errorf("do request: %w", err)
 	}
 	defer func() {
 		if err = resp.Body.Close(); err != nil {
-			log.ErrorContext(ctx, "Failed to close response body",
+			p.log.ErrorContext(ctx, "Failed to close response body",
 				"error", err,
 				"canonicalURL", canonicalURL,
 				"operation", "fetchTelegramChannelPosts",
@@ -160,12 +179,12 @@ func fetchTelegramChannelPosts(ctx context.Context, slug string, log *slog.Logge
 	}()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, "", fmt.Errorf("failed to do request: unexpected status: %d", resp.StatusCode)
+		return nil, "", fmt.Errorf("do request: unexpected status: %d", resp.StatusCode)
 	}
 
 	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	if err != nil {
-		return nil, "", fmt.Errorf("failed to create document from reader: %w", err)
+		return nil, "", fmt.Errorf("create document from reader: %w", err)
 	}
 
 	var items []channelItem
@@ -174,7 +193,7 @@ func fetchTelegramChannelPosts(ctx context.Context, slug string, log *slog.Logge
 	doc.Find("a.tgme_widget_message_date").Each(func(_ int, s *goquery.Selection) {
 		item, processErr := processFoundDocItem(s)
 		if processErr != nil {
-			errs = append(errs, fmt.Errorf("failed to process found doc item: %w", processErr))
+			errs = append(errs, fmt.Errorf("process found doc item: %w", processErr))
 			return
 		}
 
@@ -197,7 +216,7 @@ func fetchTelegramChannelPosts(ctx context.Context, slug string, log *slog.Logge
 func processFoundDocItem(s *goquery.Selection) (channelItem, error) {
 	href, ok := s.Attr("href")
 	if !ok || href == "" {
-		return channelItem{}, errors.New("href is empty")
+		return channelItem{}, errors.New("href empty")
 	}
 
 	href = TelegramMessageCanonicalURL(href)
@@ -227,7 +246,7 @@ func processFoundDocItem(s *goquery.Selection) (channelItem, error) {
 	if datetime != "" {
 		parsed, timeParseErr := time.Parse(time.RFC3339, datetime)
 		if timeParseErr != nil {
-			return channelItem{}, fmt.Errorf("failed to parse datetime: %w", timeParseErr)
+			return channelItem{}, fmt.Errorf("parse datetime: %w", timeParseErr)
 		}
 		t = parsed
 	}
@@ -236,5 +255,5 @@ func processFoundDocItem(s *goquery.Selection) (channelItem, error) {
 		t = time.Now().UTC()
 	}
 
-	return channelItem{URL: href, Text: text, published: t}, nil
+	return channelItem{URL: href, text: text, published: t}, nil
 }

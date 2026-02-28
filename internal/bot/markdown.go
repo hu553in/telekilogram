@@ -1,6 +1,8 @@
-package markdown
+package bot
 
-import "strings"
+import (
+	"strings"
+)
 
 // Taken from https://core.telegram.org/bots/api#markdownv2-style.
 const mdV2SpecialChars = `._[](){}#|!+-=*~>` + "`"
@@ -14,7 +16,7 @@ var mdV2Lookup = func() [256]bool {
 	return m
 }()
 
-func EscapeV2(input string) string {
+func escapeMarkdownV2(input string) string {
 	charsToEscape := 0
 
 	for i := range len(input) {
@@ -22,6 +24,7 @@ func EscapeV2(input string) string {
 			charsToEscape++
 		}
 	}
+
 	if charsToEscape == 0 {
 		return input
 	}
