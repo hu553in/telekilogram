@@ -118,7 +118,7 @@ func (f *Fetcher) fetchTelegramChannelTitle(
 
 	req.Header.Set("User-Agent", userAgent)
 
-	resp, err := f.telegramClient.Do(req) //nolint:gosec // Telegram URL
+	resp, err := f.telegramClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("do request: %w", err)
 	}
@@ -164,7 +164,7 @@ func (p *Parser) fetchTelegramChannelPosts(
 
 	req.Header.Set("User-Agent", userAgent)
 
-	resp, err := p.telegramClient.Do(req) //nolint:gosec // Telegram URL
+	resp, err := p.telegramClient.Do(req)
 	if err != nil {
 		return nil, "", fmt.Errorf("do request: %w", err)
 	}
