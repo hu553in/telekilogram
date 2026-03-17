@@ -60,7 +60,7 @@ func (s *OpenAISummarizer) Summarize(
 	maxOutputTokens := baseMaxOutputTokens
 	for {
 		resp, err := s.client.Responses.New(ctx, responses.ResponseNewParams{
-			Model:           openai.ChatModelGPT5Mini2025_08_07,
+			Model:           openai.ChatModelGPT5_4Nano,
 			ServiceTier:     responses.ResponseNewParamsServiceTierFlex,
 			MaxOutputTokens: openai.Int(maxOutputTokens),
 			Reasoning: responses.ReasoningParam{
