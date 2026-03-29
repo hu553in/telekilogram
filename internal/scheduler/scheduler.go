@@ -59,7 +59,8 @@ func (s *Scheduler) checkHourFeeds() {
 	select {
 	case <-ctx.Done():
 		s.log.InfoContext(ctx, "Scheduler context is done",
-			"error", ctx.Err())
+			"error", ctx.Err(),
+			"operation", "checkHourFeeds")
 		return
 	default:
 	}
@@ -76,7 +77,9 @@ func (s *Scheduler) checkHourFeeds() {
 
 	if ctx.Err() != nil {
 		s.log.InfoContext(ctx, "Scheduler context is done",
-			"error", ctx.Err())
+			"error", ctx.Err(),
+			"hourUTC", hourUTC,
+			"operation", "checkHourFeeds")
 		return
 	}
 

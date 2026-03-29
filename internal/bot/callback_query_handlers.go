@@ -8,29 +8,35 @@ import (
 	"strings"
 	"telekilogram/internal/domain"
 
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/go-telegram/bot"
+	"github.com/go-telegram/bot/models"
 )
 
-func (b *Bot) handleCallbackQuery(ctx context.Context, callback *tgbotapi.CallbackQuery) error {
-	return b.withSpinner(ctx, callback.Message.Chat.ID, func() error {
+func (b *Bot) handleCallbackQuery(ctx context.Context, callback *models.CallbackQuery) error {
+	message := callbackMessage(callback)
+	if message == nil {
+		return errors.New("callback query has no accessible message")
+	}
+
+	return b.withSpinner(ctx, message.Chat.ID, func() error {
 		data := strings.TrimSpace(callback.Data)
 
 		switch data {
 		case "menu":
-			return b.withEmptyCallbackAnswer(callback, func() error {
-				return b.handleMenuCommand(callback.Message.Chat.ID)
+			return b.withEmptyCallbackAnswer(ctx, callback, func() error {
+				return b.handleMenuCommand(ctx, message.Chat.ID)
 			})
 		case "menu_list":
-			return b.withEmptyCallbackAnswer(callback, func() error {
-				return b.handleListCommand(ctx, callback.Message.Chat.ID, callback.From.ID)
+			return b.withEmptyCallbackAnswer(ctx, callback, func() error {
+				return b.handleListCommand(ctx, message.Chat.ID, callback.From.ID)
 			})
 		case "menu_digest":
-			return b.withEmptyCallbackAnswer(callback, func() error {
-				return b.handleDigestCommand(ctx, callback.Message.Chat.ID, callback.From.ID)
+			return b.withEmptyCallbackAnswer(ctx, callback, func() error {
+				return b.handleDigestCommand(ctx, message.Chat.ID, callback.From.ID)
 			})
 		case "menu_settings":
-			return b.withEmptyCallbackAnswer(callback, func() error {
-				return b.handleSettingsCommand(ctx, callback.Message.Chat.ID, callback.From.ID)
+			return b.withEmptyCallbackAnswer(ctx, callback, func() error {
+				return b.handleSettingsCommand(ctx, message.Chat.ID, callback.From.ID)
 			})
 		}
 
@@ -45,37 +51,48 @@ func (b *Bot) handleCallbackQuery(ctx context.Context, callback *tgbotapi.Callba
 func (b *Bot) handleSettingsAutoDigestHourUTCQuery(
 	ctx context.Context,
 	hourUTCStr string,
-	callback *tgbotapi.CallbackQuery,
+	callback *models.CallbackQuery,
 ) error {
+	message := callbackMessage(callback)
+	if message == nil {
+		return errors.New("callback query has no accessible message")
+	}
+
 	hourUTCStr = strings.TrimSpace(hourUTCStr)
 
 	hourUTC, err := strconv.ParseInt(hourUTCStr, 10, 64)
 	if err != nil {
-		return b.errorCallbackAnswer(callback, fmt.Errorf("parse hourUTC: %w", err))
+		return b.errorCallbackAnswer(ctx, callback, fmt.Errorf("parse hourUTC: %w", err))
 	}
 
 	if err = b.db.UpsertUserSettings(ctx, &domain.UserSettings{
 		UserID:            callback.From.ID,
 		AutoDigestHourUTC: hourUTC,
 	}); err != nil {
-		return b.errorCallbackAnswer(callback, fmt.Errorf("upsert user settings: %w", err))
+		return b.errorCallbackAnswer(ctx, callback, fmt.Errorf("upsert user settings: %w", err))
 	}
 
-	if _, err = b.rateLimiter.Request(tgbotapi.NewCallback(callback.ID, "✅ Settings are updated.")); err != nil {
-		return fmt.Errorf("send request: %w", err)
+	if _, err = b.rateLimiter.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{
+		CallbackQueryID: callback.ID,
+		Text:            "✅ Settings are updated.",
+	}); err != nil {
+		return fmt.Errorf("answer callback query: %w", err)
 	}
 
-	return b.handleSettingsCommand(ctx, callback.Message.Chat.ID, callback.From.ID)
+	return b.handleSettingsCommand(ctx, message.Chat.ID, callback.From.ID)
 }
 
 func (b *Bot) withEmptyCallbackAnswer(
-	callback *tgbotapi.CallbackQuery,
+	ctx context.Context,
+	callback *models.CallbackQuery,
 	fn func() error,
 ) error {
 	var errs []error
 
-	if _, err := b.rateLimiter.Request(tgbotapi.NewCallback(callback.ID, "")); err != nil {
-		errs = append(errs, b.errorCallbackAnswer(callback, fmt.Errorf("send request: %w", err)))
+	if _, err := b.rateLimiter.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{
+		CallbackQueryID: callback.ID,
+	}); err != nil {
+		errs = append(errs, b.errorCallbackAnswer(ctx, callback, fmt.Errorf("answer callback query: %w", err)))
 	}
 
 	err := fn()
@@ -87,11 +104,15 @@ func (b *Bot) withEmptyCallbackAnswer(
 }
 
 func (b *Bot) errorCallbackAnswer(
-	callback *tgbotapi.CallbackQuery,
+	ctx context.Context,
+	callback *models.CallbackQuery,
 	err error,
 ) error {
-	if _, sendErr := b.rateLimiter.Request(tgbotapi.NewCallback(callback.ID, "❌ Failed.")); sendErr != nil {
-		return errors.Join(err, fmt.Errorf("send request: %w", sendErr))
+	if _, sendErr := b.rateLimiter.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{
+		CallbackQueryID: callback.ID,
+		Text:            "❌ Failed.",
+	}); sendErr != nil {
+		return errors.Join(err, fmt.Errorf("answer callback query: %w", sendErr))
 	}
 	return err
 }

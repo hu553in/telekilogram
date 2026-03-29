@@ -1,10 +1,12 @@
 package bot
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/go-telegram/bot"
+	"github.com/go-telegram/bot/models"
 )
 
 const (
@@ -14,59 +16,66 @@ const (
 )
 
 func (b *Bot) sendMessageWithKeyboard(
+	ctx context.Context,
 	chatID int64,
 	text string,
-	keyboard [][]tgbotapi.InlineKeyboardButton,
+	keyboard [][]models.InlineKeyboardButton,
 ) error {
 	normalizedText := strings.ToValidUTF8(text, "?")
 	if normalizedText != text {
-		b.log.Warn("Message text had invalid UTF-8 and was normalized",
+		b.log.WarnContext(ctx, "Message text had invalid UTF-8 and was normalized",
 			"chatID", chatID,
 			"originalLen", len(text),
 			"normalizedLen", len(normalizedText))
 	}
 
-	message := tgbotapi.NewMessage(chatID, normalizedText)
-
-	// See https://core.telegram.org/bots/api#markdownv2-style.
-	message.ParseMode = tgbotapi.ModeMarkdownV2
-
-	message.DisableWebPagePreview = true
-	message.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(keyboard...)
-
-	_, err := b.rateLimiter.Send(message)
+	_, err := b.rateLimiter.SendMessage(ctx, &bot.SendMessageParams{
+		ChatID: chatID,
+		Text:   normalizedText,
+		// See https://core.telegram.org/bots/api#markdownv2-style.
+		ParseMode: models.ParseModeMarkdown,
+		LinkPreviewOptions: &models.LinkPreviewOptions{
+			IsDisabled: bot.True(),
+		},
+		ReplyMarkup: &models.InlineKeyboardMarkup{
+			InlineKeyboard: keyboard,
+		},
+	})
 	return err
 }
 
-func getReturnKeyboard() [][]tgbotapi.InlineKeyboardButton {
-	return [][]tgbotapi.InlineKeyboardButton{
-		{tgbotapi.NewInlineKeyboardButtonData("⬅️ Return to menu", "menu")},
+func getReturnKeyboard() [][]models.InlineKeyboardButton {
+	return [][]models.InlineKeyboardButton{
+		{{Text: "⬅️ Return to menu", CallbackData: "menu"}},
 	}
 }
 
-func getMenuKeyboard() [][]tgbotapi.InlineKeyboardButton {
-	return [][]tgbotapi.InlineKeyboardButton{
+func getMenuKeyboard() [][]models.InlineKeyboardButton {
+	return [][]models.InlineKeyboardButton{
 		{
-			tgbotapi.NewInlineKeyboardButtonData("📄 Feed list", "menu_list"),
-			tgbotapi.NewInlineKeyboardButtonData("👈 24h digest", "menu_digest"),
+			{Text: "📄 Feed list", CallbackData: "menu_list"},
+			{Text: "👈 24h digest", CallbackData: "menu_digest"},
 		},
 		{
-			tgbotapi.NewInlineKeyboardButtonData("⚙️ Settings", "menu_settings"),
+			{Text: "⚙️ Settings", CallbackData: "menu_settings"},
 		},
 	}
 }
 
-func getSettingsAutoDigestHourUTCKeyboard() [][]tgbotapi.InlineKeyboardButton {
-	var keyboard [][]tgbotapi.InlineKeyboardButton
+func getSettingsAutoDigestHourUTCKeyboard() [][]models.InlineKeyboardButton {
+	var keyboard [][]models.InlineKeyboardButton
 
 	for i := 0; i < hoursPerDay; i += settingsAutoDigestHourUTCKeyboardRowSize {
-		var row []tgbotapi.InlineKeyboardButton
+		var row []models.InlineKeyboardButton
 
 		for j := i; j < i+settingsAutoDigestHourUTCKeyboardRowSize && j < hoursPerDay; j++ {
 			hour := fmt.Sprintf("%02d", j)
 			row = append(
 				row,
-				tgbotapi.NewInlineKeyboardButtonData(hour, settingsAutoDigestHourUTCKeyboardCallbackPrefix+hour),
+				models.InlineKeyboardButton{
+					Text:         hour,
+					CallbackData: settingsAutoDigestHourUTCKeyboardCallbackPrefix + hour,
+				},
 			)
 		}
 

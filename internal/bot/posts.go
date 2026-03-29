@@ -28,7 +28,7 @@ func (b *Bot) SendNewPosts(ctx context.Context, chatID int64, posts []domain.Pos
 	messages := b.formatPostsAsMessages(ctx, posts)
 
 	for _, message := range messages {
-		if err := b.sendMessageWithKeyboard(chatID, message, b.returnKeyboard); err != nil {
+		if err := b.sendMessageWithKeyboard(ctx, chatID, message, b.returnKeyboard); err != nil {
 			errs = append(errs, fmt.Errorf("send message with keyboard: %w", err))
 		}
 	}

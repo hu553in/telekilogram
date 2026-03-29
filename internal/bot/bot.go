@@ -10,30 +10,23 @@ import (
 	"telekilogram/internal/ratelimiter"
 	"time"
 
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/go-telegram/bot"
+	"github.com/go-telegram/bot/models"
 )
 
-const (
-	maxBackoffSeconds         = 60
-	initialBackoffSeconds     = 3
-	backoffGrowthFactor       = 2
-	resetOffsetBackoffSeconds = 30
-	updateProcessingTimeout   = 60 * time.Second
-
-	BotUpdateTimeout = 60
-)
+const updateProcessingTimeout = 60 * time.Second
 
 type Bot struct {
-	api         *tgbotapi.BotAPI
+	api         *bot.Bot
 	rateLimiter *ratelimiter.RateLimiter
 	db          *database.Database
 	fetcher     *feed.Fetcher
 
 	allowedUsers []int64
 
-	returnKeyboard                    [][]tgbotapi.InlineKeyboardButton
-	settingsAutoDigestHourUTCKeyboard [][]tgbotapi.InlineKeyboardButton
-	menuKeyboard                      [][]tgbotapi.InlineKeyboardButton
+	returnKeyboard                    [][]models.InlineKeyboardButton
+	settingsAutoDigestHourUTCKeyboard [][]models.InlineKeyboardButton
+	menuKeyboard                      [][]models.InlineKeyboardButton
 
 	log *slog.Logger
 }
@@ -46,17 +39,14 @@ func New(
 	log *slog.Logger,
 ) (*Bot, error) {
 	token = strings.TrimSpace(token)
-
-	api, err := tgbotapi.NewBotAPI(token)
-	if err != nil {
-		return nil, err
+	allowedUpdates := bot.AllowedUpdates{
+		models.AllowedUpdateMessage,
+		models.AllowedUpdateCallbackQuery,
 	}
 
-	return &Bot{
-		api:         api,
-		rateLimiter: ratelimiter.New(api, log),
-		db:          db,
-		fetcher:     fetcher,
+	b := &Bot{
+		db:      db,
+		fetcher: fetcher,
 
 		allowedUsers: allowedUsers,
 
@@ -65,59 +55,31 @@ func New(
 		menuKeyboard:                      getMenuKeyboard(),
 
 		log: log,
-	}, nil
+	}
+
+	api, err := bot.New(
+		token,
+		bot.WithAllowedUpdates(allowedUpdates),
+		bot.WithErrorsHandler(func(err error) {
+			log.Error("Telegram runtime error", "error", err)
+		}),
+		bot.WithNotAsyncHandlers(),
+		bot.WithDefaultHandler(func(ctx context.Context, _ *bot.Bot, update *models.Update) {
+			b.handleUpdate(ctx, update)
+		}),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	b.api = api
+	b.rateLimiter = ratelimiter.New(api, log)
+
+	return b, nil
 }
 
 func (b *Bot) Start(ctx context.Context) {
-	updateConfig := tgbotapi.NewUpdate(0)
-	updateConfig.Timeout = BotUpdateTimeout
-
-	backoffSeconds := initialBackoffSeconds
-
-	for {
-		select {
-		case <-ctx.Done():
-			b.log.InfoContext(ctx, "Bot context is done",
-				"error", ctx.Err())
-			return
-		default:
-		}
-
-		updates := b.api.GetUpdatesChan(updateConfig)
-		updatesClosed := false
-
-		for !updatesClosed {
-			select {
-			case <-ctx.Done():
-				b.log.InfoContext(ctx, "Bot context is done",
-					"error", ctx.Err())
-				return
-
-			case update, ok := <-updates:
-				if !ok {
-					updatesClosed = true
-					continue
-				}
-				updateConfig.Offset = update.UpdateID + 1
-				b.handleUpdate(ctx, &update)
-			}
-		}
-
-		if ctx.Err() != nil {
-			return
-		}
-
-		b.log.WarnContext(ctx, "Update channel is closed, reconnecting...",
-			"offset", updateConfig.Offset,
-			"backoffSeconds", backoffSeconds)
-
-		time.Sleep(time.Duration(backoffSeconds) * time.Second)
-
-		backoffSeconds = updateBackoffSeconds(backoffSeconds)
-		if backoffSeconds >= resetOffsetBackoffSeconds {
-			updateConfig.Offset = 0
-		}
-	}
+	b.api.Start(ctx)
 }
 
 func (b *Bot) Stop() {
@@ -126,20 +88,29 @@ func (b *Bot) Stop() {
 	}
 }
 
-func (b *Bot) handleUpdate(ctx context.Context, update *tgbotapi.Update) {
+func (b *Bot) handleUpdate(ctx context.Context, update *models.Update) {
 	updateCtx, cancel := context.WithTimeout(ctx, updateProcessingTimeout)
 	defer cancel()
 
 	switch {
 	case update.Message != nil:
-		chatID, chatType := chatContext(update.Message.Chat)
+		chatID, chatType := chatContext(&update.Message.Chat)
+
+		if update.Message.From == nil {
+			b.log.ErrorContext(updateCtx, "Message update has no sender",
+				"updateID", update.ID,
+				"messageID", update.Message.ID,
+				"chatID", chatID,
+				"chatType", chatType)
+			return
+		}
 
 		userID := update.Message.From.ID
 		if !b.userAllowed(update.Message.From.ID) {
 			b.log.DebugContext(updateCtx, "User is not allowed",
 				"userID", userID,
 				"chatID", chatID,
-				"username", update.Message.From.UserName,
+				"username", username(update.Message.From),
 				"chatType", chatType)
 			return
 		}
@@ -150,17 +121,35 @@ func (b *Bot) handleUpdate(ctx context.Context, update *tgbotapi.Update) {
 				"chatID", chatID,
 				"userID", userID,
 				"chatType", chatType,
-				"messageID", update.Message.MessageID)
+				"messageID", update.Message.ID)
 		}
 
 	case update.CallbackQuery != nil:
 		chatID := callbackChatID(update.CallbackQuery)
+		message := callbackMessage(update.CallbackQuery)
+		if message == nil {
+			err := b.answerCallbackError(updateCtx, update.CallbackQuery, "❌ Failed.")
+
+			args := []any{
+				"callbackQueryID", update.CallbackQuery.ID,
+				"userID", update.CallbackQuery.From.ID,
+				"chatID", chatID,
+				"data", update.CallbackQuery.Data,
+			}
+			if err != nil {
+				args = append(args, "answerError", err)
+			}
+
+			b.log.WarnContext(updateCtx, "Callback query has no accessible message", args...)
+			return
+		}
 
 		if !b.userAllowed(update.CallbackQuery.From.ID) {
 			b.log.DebugContext(updateCtx, "User is not allowed",
+				"callbackQueryID", update.CallbackQuery.ID,
 				"userID", update.CallbackQuery.From.ID,
 				"chatID", chatID,
-				"username", update.CallbackQuery.From.UserName,
+				"username", update.CallbackQuery.From.Username,
 				"data", update.CallbackQuery.Data)
 			return
 		}
@@ -168,6 +157,7 @@ func (b *Bot) handleUpdate(ctx context.Context, update *tgbotapi.Update) {
 		if err := b.handleCallbackQuery(updateCtx, update.CallbackQuery); err != nil {
 			b.log.ErrorContext(updateCtx, "Failed to handle callback query",
 				"error", err,
+				"callbackQueryID", update.CallbackQuery.ID,
 				"chatID", chatID,
 				"userID", update.CallbackQuery.From.ID,
 				"data", update.CallbackQuery.Data,
@@ -180,33 +170,49 @@ func (b *Bot) userAllowed(userID int64) bool {
 	return len(b.allowedUsers) == 0 || slices.Contains(b.allowedUsers, userID)
 }
 
-func chatContext(chat *tgbotapi.Chat) (int64, string) {
+func chatContext(chat *models.Chat) (int64, string) {
 	if chat == nil {
 		return 0, ""
 	}
-	return chat.ID, chat.Type
+	return chat.ID, string(chat.Type)
 }
 
-func callbackChatID(cb *tgbotapi.CallbackQuery) int64 {
-	if cb != nil && cb.Message != nil && cb.Message.Chat != nil {
-		return cb.Message.Chat.ID
+func username(user *models.User) string {
+	if user == nil {
+		return ""
+	}
+	return user.Username
+}
+
+func callbackChatID(cb *models.CallbackQuery) int64 {
+	if message := callbackMessage(cb); message != nil {
+		return message.Chat.ID
 	}
 	return 0
 }
 
-func callbackMessageID(cb *tgbotapi.CallbackQuery) int {
-	if cb != nil && cb.Message != nil {
-		return cb.Message.MessageID
+func callbackMessageID(cb *models.CallbackQuery) int {
+	if message := callbackMessage(cb); message != nil {
+		return message.ID
 	}
 	return 0
 }
 
-func updateBackoffSeconds(backoffSeconds int) int {
-	if backoffSeconds < maxBackoffSeconds {
-		backoffSeconds *= backoffGrowthFactor
-		if backoffSeconds > maxBackoffSeconds {
-			backoffSeconds = maxBackoffSeconds
-		}
+func callbackMessage(cb *models.CallbackQuery) *models.Message {
+	if cb == nil {
+		return nil
 	}
-	return backoffSeconds
+	return cb.Message.Message
+}
+
+func (b *Bot) answerCallbackError(ctx context.Context, callback *models.CallbackQuery, text string) error {
+	if callback == nil {
+		return nil
+	}
+
+	_, err := b.rateLimiter.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{
+		CallbackQueryID: callback.ID,
+		Text:            text,
+	})
+	return err
 }

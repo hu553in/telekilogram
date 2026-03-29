@@ -70,7 +70,8 @@ func main() {
 		botInst.Start(ctx)
 	}()
 	log.InfoContext(ctx, "Bot is started",
-		"updateTimeoutSeconds", bot.BotUpdateTimeout)
+		"allowedUsersCount", len(cfg.AllowedUsers),
+		"startupSeconds", time.Since(start).Seconds())
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)

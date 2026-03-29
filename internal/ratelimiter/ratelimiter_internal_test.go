@@ -1,10 +1,13 @@
 package ratelimiter
 
 import (
+	"context"
+	"errors"
 	"testing"
 	"time"
 
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/go-telegram/bot"
+	"github.com/go-telegram/bot/models"
 )
 
 func TestGetDelay(t *testing.T) {
@@ -59,30 +62,84 @@ func TestGetDelay(t *testing.T) {
 
 func TestGetChatID(t *testing.T) {
 	tests := []struct {
-		name    string
-		message tgbotapi.Chattable
-		want    int64
+		name   string
+		chatID any
+		want   int64
 	}{
 		{
-			"MessageConfig",
-			tgbotapi.NewMessage(12345, "test"),
+			"Int64 chat ID",
+			int64(12345),
 			12345,
 		},
 		{
-			"ChatActionConfig",
-			tgbotapi.NewChatAction(67890, tgbotapi.ChatTyping),
+			"Int chat ID",
 			67890,
+			67890,
+		},
+		{
+			"String chat ID",
+			"@channel",
+			0,
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := getChatID(test.message)
+			got, err := chatIDFromAny(test.chatID)
+			if err != nil {
+				t.Fatalf("chatIDFromAny() error = %v", err)
+			}
 
 			if got != test.want {
 				t.Errorf("Expected %v chatID, got %v", test.want, got)
 			}
 		})
+	}
+}
+
+func TestChatIDFromAnyUnsupportedType(t *testing.T) {
+	_, err := chatIDFromAny(&bot.SendChatActionParams{
+		ChatID: 1,
+		Action: models.ChatActionTyping,
+	})
+	if err == nil {
+		t.Fatal("expected error for unsupported chat ID type")
+	}
+}
+
+func TestHandleRequestSkipsCanceledRequest(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	rl := &RateLimiter{
+		lastSent: make(map[int64]time.Time),
+		ctx:      context.Background(),
+	}
+
+	called := false
+	req := request{
+		chatID:   123,
+		ctx:      ctx,
+		response: make(chan response, 1),
+		run: func(context.Context) response {
+			called = true
+			return response{}
+		},
+	}
+
+	rl.handleRequest(req)
+
+	if called {
+		t.Fatal("expected canceled request to be skipped")
+	}
+
+	resp := <-req.response
+	if !errors.Is(resp.err, context.Canceled) {
+		t.Fatalf("expected context canceled error, got %v", resp.err)
+	}
+
+	if _, ok := rl.lastSent[req.chatID]; ok {
+		t.Fatal("expected canceled request to not update lastSent")
 	}
 }
 

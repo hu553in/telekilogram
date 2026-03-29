@@ -4,17 +4,21 @@ import (
 	"context"
 	"time"
 
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/go-telegram/bot"
+	"github.com/go-telegram/bot/models"
 )
 
 const sendSpinnerInterval = 3 * time.Second
 
 func (b *Bot) sendTyping(ctx context.Context, chatID int64) {
-	config := tgbotapi.NewChatAction(chatID, tgbotapi.ChatTyping)
-	_, err := b.rateLimiter.Request(config)
+	_, err := b.rateLimiter.SendChatAction(ctx, &bot.SendChatActionParams{
+		ChatID: chatID,
+		Action: models.ChatActionTyping,
+	})
 	if err != nil {
 		b.log.ErrorContext(ctx, "Failed to send chat action",
-			"error", err)
+			"error", err,
+			"chatID", chatID)
 	}
 }
 
