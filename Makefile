@@ -9,10 +9,10 @@ ensure-build-dir:
 	mkdir -p $(BUILD_DIR)
 
 .PHONY: pre-commit
-pre-commit: lint verify-test-coverage build
+pre-commit: build lint verify-test-coverage
 
 .PHONY: check
-check: fmt lint verify-test-coverage build
+check: build fmt lint verify-test-coverage
 
 .PHONY: install-deps
 install-deps:

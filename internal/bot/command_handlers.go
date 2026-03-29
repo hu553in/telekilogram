@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/go-telegram/bot"
 )
 
 const maxHourForAddingLeadingZero = 9
@@ -136,13 +138,13 @@ func (b *Bot) handleListCommand(ctx context.Context, chatID int64, userID int64)
 				&message,
 				"%d\\. [%s](%s) \\[[unfollow](https://t\\.me/%s?start=unfollow_%d)\\]\n",
 				i+1,
-				escapeMarkdownV2(title),
+				bot.EscapeMarkdownUnescaped(title),
 				url,
 				botInfo.Username,
 				f.ID,
 			)
 		} else {
-			fmt.Fprintf(&message, "%d\\. [%s](%s)\n", i+1, escapeMarkdownV2(title), url)
+			fmt.Fprintf(&message, "%d\\. [%s](%s)\n", i+1, bot.EscapeMarkdownUnescaped(title), url)
 		}
 	}
 

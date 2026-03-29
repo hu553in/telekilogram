@@ -9,6 +9,8 @@ import (
 	"slices"
 	"strings"
 	"telekilogram/internal/domain"
+
+	"github.com/go-telegram/bot"
 )
 
 const telegramMessageMaxLength = 4096
@@ -69,8 +71,12 @@ func (b *Bot) formatPostsAsMessages(ctx context.Context, posts []domain.Post) []
 	for _, key := range feedGroupKeys {
 		feedPosts := feedGroups[key]
 
-		feedHeader := fmt.Sprintf("📌 *[%s](%s)*\n\n", escapeMarkdownV2(key.title), key.URL)
-		firstBulletPoint := fmt.Sprintf("– [%s](%s)\n\n", escapeMarkdownV2(feedPosts[0].Title), feedPosts[0].URL)
+		feedHeader := fmt.Sprintf("📌 *[%s](%s)*\n\n", bot.EscapeMarkdownUnescaped(key.title), key.URL)
+		firstBulletPoint := fmt.Sprintf(
+			"– [%s](%s)\n\n",
+			bot.EscapeMarkdownUnescaped(feedPosts[0].Title),
+			feedPosts[0].URL,
+		)
 
 		if currentMessage.Len()+
 			len(feedHeader)+
@@ -83,7 +89,7 @@ func (b *Bot) formatPostsAsMessages(ctx context.Context, posts []domain.Post) []
 		currentMessage.WriteString(feedHeader)
 
 		for _, post := range feedPosts {
-			bulletPoint := fmt.Sprintf("– [%s](%s)\n\n", escapeMarkdownV2(post.Title), post.URL)
+			bulletPoint := fmt.Sprintf("– [%s](%s)\n\n", bot.EscapeMarkdownUnescaped(post.Title), post.URL)
 
 			if currentMessage.Len()+len(bulletPoint) > telegramMessageMaxLength {
 				messages = append(messages, currentMessage.String())
