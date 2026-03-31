@@ -37,10 +37,10 @@ func main() {
 	log.InfoContext(ctx, "DB is initialized",
 		"dbPath", cfg.DBPath)
 
-	summarizer := initOpenAISummarizer(ctx, cfg.OpenAIAPIKey, log)
-	fetcher := feed.NewFetcher(db, summarizer, log)
+	summarizer := initOpenAISummarizer(ctx, cfg.OpenAIAPIKey, cfg.OpenAI, log)
+	fetcher := feed.NewFetcher(db, summarizer, cfg.Feed, cfg.Telegram, log)
 
-	botInst, err := bot.New(cfg.Token, db, fetcher, cfg.AllowedUsers, log)
+	botInst, err := bot.New(cfg.Token, db, fetcher, cfg.AllowedUsers, cfg.Bot, cfg.RateLimiter, log)
 	if err != nil {
 		log.ErrorContext(ctx, "Failed to initialize bot",
 			"error", err,
@@ -51,7 +51,7 @@ func main() {
 	log.InfoContext(ctx, "Bot is initialized",
 		"allowedUsersCount", len(cfg.AllowedUsers))
 
-	sched := scheduler.New(ctx, botInst, fetcher, log)
+	sched := scheduler.New(ctx, botInst, fetcher, cfg.Scheduler, log)
 
 	if err = sched.Start(); err != nil {
 		log.ErrorContext(ctx, "Failed to start scheduler",
@@ -89,7 +89,12 @@ func main() {
 		"uptimeSeconds", time.Since(start).Seconds())
 }
 
-func initOpenAISummarizer(ctx context.Context, apiKey string, log *slog.Logger) summarizer.Summarizer {
+func initOpenAISummarizer(
+	ctx context.Context,
+	apiKey string,
+	cfg config.OpenAIConfig,
+	log *slog.Logger,
+) summarizer.Summarizer {
 	if apiKey == "" {
 		log.WarnContext(ctx, "OPENAI_API_KEY is missing so fallback will be used",
 			"envVar", "OPENAI_API_KEY")
@@ -97,7 +102,7 @@ func initOpenAISummarizer(ctx context.Context, apiKey string, log *slog.Logger) 
 		return nil
 	}
 
-	s, err := summarizer.NewOpenAISummarizer(apiKey)
+	s, err := summarizer.NewOpenAISummarizer(apiKey, cfg)
 	if err != nil {
 		log.ErrorContext(ctx, "Failed to create OpenAI summarizer so fallback will be used",
 			"error", err,

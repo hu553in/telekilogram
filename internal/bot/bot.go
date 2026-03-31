@@ -5,16 +5,14 @@ import (
 	"log/slog"
 	"slices"
 	"strings"
+	"telekilogram/internal/config"
 	"telekilogram/internal/database"
 	"telekilogram/internal/feed"
 	"telekilogram/internal/ratelimiter"
-	"time"
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
 )
-
-const updateProcessingTimeout = 60 * time.Second
 
 type Bot struct {
 	api         *bot.Bot
@@ -28,6 +26,7 @@ type Bot struct {
 	settingsAutoDigestHourUTCKeyboard [][]models.InlineKeyboardButton
 	menuKeyboard                      [][]models.InlineKeyboardButton
 
+	cfg config.BotConfig
 	log *slog.Logger
 }
 
@@ -36,6 +35,8 @@ func New(
 	db *database.Database,
 	fetcher *feed.Fetcher,
 	allowedUsers []int64,
+	cfg config.BotConfig,
+	rateLimiterCfg config.RateLimiterConfig,
 	log *slog.Logger,
 ) (*Bot, error) {
 	token = strings.TrimSpace(token)
@@ -54,6 +55,7 @@ func New(
 		settingsAutoDigestHourUTCKeyboard: getSettingsAutoDigestHourUTCKeyboard(),
 		menuKeyboard:                      getMenuKeyboard(),
 
+		cfg: cfg,
 		log: log,
 	}
 
@@ -73,7 +75,7 @@ func New(
 	}
 
 	b.api = api
-	b.rateLimiter = ratelimiter.New(api, log)
+	b.rateLimiter = ratelimiter.New(api, rateLimiterCfg, log)
 
 	return b, nil
 }
@@ -89,7 +91,7 @@ func (b *Bot) Stop() {
 }
 
 func (b *Bot) handleUpdate(ctx context.Context, update *models.Update) {
-	updateCtx, cancel := context.WithTimeout(ctx, updateProcessingTimeout)
+	updateCtx, cancel := context.WithTimeout(ctx, b.cfg.UpdateProcessingTimeout)
 	defer cancel()
 
 	switch {

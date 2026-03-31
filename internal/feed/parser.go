@@ -9,18 +9,13 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"telekilogram/internal/config"
 	"telekilogram/internal/database"
 	"telekilogram/internal/domain"
 	"telekilogram/internal/summarizer"
 	"time"
 
 	"github.com/mmcdole/gofeed"
-)
-
-const (
-	telegramSummariesMaxParallelism = 4
-	parseFeedGracePeriod            = 10 * time.Minute
-	fallbackTelegramSummaryMaxChars = 200
 )
 
 type telegramSummarizationCandidate struct {
@@ -34,6 +29,8 @@ type Parser struct {
 	summaryCache   *telegramSummaryCache
 	libParser      *gofeed.Parser
 	telegramClient *http.Client
+	feedCfg        config.FeedConfig
+	telegramCfg    config.TelegramConfig
 	log            *slog.Logger
 }
 
@@ -42,14 +39,18 @@ func NewParser(
 	s summarizer.Summarizer,
 	libParser *gofeed.Parser,
 	telegramClient *http.Client,
+	feedCfg config.FeedConfig,
+	telegramCfg config.TelegramConfig,
 	log *slog.Logger,
 ) *Parser {
 	return &Parser{
 		db:             db,
 		summarizer:     s,
-		summaryCache:   newTelegramSummaryCache(telegramSummaryCacheMaxEntries),
+		summaryCache:   newTelegramSummaryCache(feedCfg.TelegramSummaryCacheMaxEntries),
 		libParser:      libParser,
 		telegramClient: telegramClient,
+		feedCfg:        feedCfg,
+		telegramCfg:    telegramCfg,
 		log:            log,
 	}
 }
@@ -83,7 +84,7 @@ func (p *Parser) ParseFeed(
 
 	var newPosts []domain.Post
 	now := time.Now().Round(time.Hour)
-	cutoffTime := now.Add(-24*time.Hour - parseFeedGracePeriod)
+	cutoffTime := now.Add(-24*time.Hour - p.feedCfg.ParseFeedGracePeriod)
 
 	for _, item := range parsed.Items {
 		post, ok := p.parseFeedItem(
@@ -181,7 +182,7 @@ func (p *Parser) parseTelegramChannelFeed(
 	var (
 		newPosts     []domain.Post
 		now          = time.Now().Round(time.Hour)
-		cutoffTime   = now.Add(-24*time.Hour - parseFeedGracePeriod)
+		cutoffTime   = now.Add(-24*time.Hour - p.feedCfg.ParseFeedGracePeriod)
 		candidates   []telegramSummarizationCandidate
 		canonicalURL = TelegramChannelCanonicalURL(slug)
 	)
@@ -278,7 +279,7 @@ func (p *Parser) summarizeTelegramPosts(
 		return summaries
 	}
 
-	workerCount := telegramSummariesMaxParallelism
+	workerCount := p.feedCfg.TelegramSummariesMaxParallelism
 	if workerCount <= 0 {
 		workerCount = 1
 	}
@@ -334,7 +335,7 @@ func (p *Parser) summarizeTelegramPost(
 	}
 
 	if p.summarizer == nil {
-		return fallbackTelegramSummary(text, item.URL)
+		return p.fallbackTelegramSummary(text, item.URL)
 	}
 
 	summary, err := p.summarizer.Summarize(ctx, summarizer.Input{
@@ -349,12 +350,12 @@ func (p *Parser) summarizeTelegramPost(
 			"cacheKey", cacheKey,
 			"textLen", len(text))
 
-		return fallbackTelegramSummary(text, item.URL)
+		return p.fallbackTelegramSummary(text, item.URL)
 	}
 
 	summary = strings.TrimSpace(summary)
 	if summary == "" {
-		return fallbackTelegramSummary(text, item.URL)
+		return p.fallbackTelegramSummary(text, item.URL)
 	}
 
 	published := item.published
@@ -362,7 +363,7 @@ func (p *Parser) summarizeTelegramPost(
 		published = now
 	}
 
-	expiresAt := published.Add(24*time.Hour + parseFeedGracePeriod)
+	expiresAt := published.Add(24*time.Hour + p.feedCfg.ParseFeedGracePeriod)
 	if expiresAt.After(now) && cacheKey != "" && p.summaryCache != nil {
 		p.summaryCache.set(cacheKey, summary, expiresAt, now)
 	}
@@ -385,18 +386,18 @@ func telegramSummaryCacheKey(rawURL string, text string) string {
 	return canonicalURL + "|" + hex.EncodeToString(hash[:])
 }
 
-func fallbackTelegramSummary(text string, itemURL string) string {
+func (p *Parser) fallbackTelegramSummary(text string, itemURL string) string {
 	normalized := strings.Join(strings.Fields(text), " ")
 	if normalized == "" {
 		return itemURL
 	}
 
 	runes := []rune(normalized)
-	if len(runes) <= fallbackTelegramSummaryMaxChars {
+	if len(runes) <= p.feedCfg.FallbackTelegramSummaryMaxChars {
 		return normalized
 	}
 
-	trimmed := strings.TrimSpace(string(runes[:fallbackTelegramSummaryMaxChars]))
+	trimmed := strings.TrimSpace(string(runes[:p.feedCfg.FallbackTelegramSummaryMaxChars]))
 	if trimmed == "" {
 		return normalized
 	}

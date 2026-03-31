@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"telekilogram/internal/bot"
+	"telekilogram/internal/config"
 	"telekilogram/internal/domain"
 	"telekilogram/internal/feed"
 	"time"
@@ -15,7 +16,6 @@ const (
 	HourlyDigestSpec      = "0 * * * *"
 	Timezone              = "UTC"
 	TimezoneOffsetSeconds = 0
-	checkHourFeedsTimeout = 15 * time.Minute
 )
 
 type Scheduler struct {
@@ -23,10 +23,11 @@ type Scheduler struct {
 	cron    *cron.Cron
 	bot     *bot.Bot
 	fetcher *feed.Fetcher
+	cfg     config.SchedulerConfig
 	log     *slog.Logger
 }
 
-func New(ctx context.Context, bot *bot.Bot, fetcher *feed.Fetcher, log *slog.Logger) *Scheduler {
+func New(ctx context.Context, bot *bot.Bot, fetcher *feed.Fetcher, cfg config.SchedulerConfig, log *slog.Logger) *Scheduler {
 	c := cron.New(cron.WithLocation(time.FixedZone(Timezone, TimezoneOffsetSeconds)))
 
 	return &Scheduler{
@@ -34,6 +35,7 @@ func New(ctx context.Context, bot *bot.Bot, fetcher *feed.Fetcher, log *slog.Log
 		cron:    c,
 		bot:     bot,
 		fetcher: fetcher,
+		cfg:     cfg,
 		log:     log,
 	}
 }
@@ -53,7 +55,7 @@ func (s *Scheduler) Stop() {
 }
 
 func (s *Scheduler) checkHourFeeds() {
-	ctx, cancel := context.WithTimeout(s.ctx, checkHourFeedsTimeout)
+	ctx, cancel := context.WithTimeout(s.ctx, s.cfg.CheckHourFeedsTimeout)
 	defer cancel()
 
 	select {

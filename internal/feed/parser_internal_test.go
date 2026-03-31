@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"sync"
+	"telekilogram/internal/config"
 	"telekilogram/internal/summarizer"
 	"testing"
 	"time"
@@ -73,7 +74,12 @@ func TestTelegramSummaryCacheKey(t *testing.T) {
 
 func TestParserSummarizeTelegramPostUsesCache(t *testing.T) {
 	stub := &stubSummarizer{summary: "cached summary"}
-	parser := NewParser(nil, stub, nil, nil, slog.Default())
+	parser := NewParser(nil, stub, nil, nil, config.FeedConfig{
+		TelegramSummaryCacheMaxEntries:  1024,
+		TelegramSummariesMaxParallelism: 4,
+		ParseFeedGracePeriod:            10 * time.Minute,
+		FallbackTelegramSummaryMaxChars: 200,
+	}, config.TelegramConfig{}, slog.Default())
 
 	item := channelItem{
 		URL:       "https://t.me/example/123",
@@ -101,7 +107,12 @@ func TestParserSummarizeTelegramPostUsesCache(t *testing.T) {
 
 func TestParserSummarizeTelegramPostEditedTextBypassesCache(t *testing.T) {
 	stub := &stubSummarizer{summary: "original summary"}
-	parser := NewParser(nil, stub, nil, nil, slog.Default())
+	parser := NewParser(nil, stub, nil, nil, config.FeedConfig{
+		TelegramSummaryCacheMaxEntries:  1024,
+		TelegramSummariesMaxParallelism: 4,
+		ParseFeedGracePeriod:            10 * time.Minute,
+		FallbackTelegramSummaryMaxChars: 200,
+	}, config.TelegramConfig{}, slog.Default())
 
 	item := channelItem{
 		URL:       "https://t.me/example/123",
@@ -143,7 +154,12 @@ func TestParserSummarizeTelegramPostEditedTextBypassesCache(t *testing.T) {
 
 func TestParserSummarizeTelegramPostsPreservesOrder(t *testing.T) {
 	echo := &echoCountingSummarizer{}
-	parser := NewParser(nil, echo, nil, nil, slog.Default())
+	parser := NewParser(nil, echo, nil, nil, config.FeedConfig{
+		TelegramSummaryCacheMaxEntries:  1024,
+		TelegramSummariesMaxParallelism: 4,
+		ParseFeedGracePeriod:            10 * time.Minute,
+		FallbackTelegramSummaryMaxChars: 200,
+	}, config.TelegramConfig{}, slog.Default())
 
 	candidates := []telegramSummarizationCandidate{
 		{

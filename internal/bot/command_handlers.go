@@ -17,14 +17,13 @@ const welcomeText = `🤖 *Welcome to Telekilogram\!*
 
 I'm your feed assistant\. I can help you:
 
-– Follow RSS / Atom / JSON feeds and public Telegram channels by sending URLs,
-  channel @username slugs, or forwarding messages from channels to me
-– Get feed list with /list
-– Unfollow feeds directly from list
-– Receive 24h auto\-digest daily automatically \(default \- 00:00 UTC\)
-– Receive 24h digest with /digest
-– Get concise summaries for Telegram channel posts \(AI when configured\)
-– Configure user settings with /settings`
+– Follow RSS, Atom, and JSON feeds, as well as public Telegram channels, by sending feed URLs, channel usernames, or forwarded messages from channels
+– View your current feed list with /list
+– Unfollow feeds directly from the list
+– Receive an automatic 24\-hour digest every day \(default\: 00\:00 UTC\)
+– Request a 24\-hour digest manually with /digest
+– Get concise summaries for Telegram channel posts \(AI\-generated when configured\)
+– Configure user\-specific settings with /settings`
 
 const settingsText = `*⚙️ Settings*
 

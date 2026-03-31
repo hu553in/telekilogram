@@ -14,9 +14,6 @@ import (
 )
 
 const (
-	userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
-		"AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36"
-
 	minPartsForTelegramChannelSlugStartingWithS = 2
 	minPartsForTelegramChannelAtSignSlug        = 3
 
@@ -116,7 +113,7 @@ func (f *Fetcher) fetchTelegramChannelTitle(
 		return "", fmt.Errorf("create request: %w", err)
 	}
 
-	req.Header.Set("User-Agent", userAgent)
+	req.Header.Set("User-Agent", f.parser.telegramCfg.UserAgent)
 
 	resp, err := f.telegramClient.Do(req)
 	if err != nil {
@@ -162,7 +159,7 @@ func (p *Parser) fetchTelegramChannelPosts(
 		return nil, "", fmt.Errorf("create request: %w", err)
 	}
 
-	req.Header.Set("User-Agent", userAgent)
+	req.Header.Set("User-Agent", p.telegramCfg.UserAgent)
 
 	resp, err := p.telegramClient.Do(req)
 	if err != nil {

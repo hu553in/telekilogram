@@ -6,8 +6,6 @@ import (
 	"time"
 )
 
-const telegramSummaryCacheMaxEntries = 1024
-
 type telegramSummaryCache struct {
 	mu         sync.Mutex
 	entries    map[string]*list.Element

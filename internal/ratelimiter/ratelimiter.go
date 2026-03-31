@@ -6,16 +6,11 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
+	"telekilogram/internal/config"
 	"time"
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
-)
-
-const (
-	privateChatRate = time.Second
-	groupChatRate   = 3 * time.Second
-	queueSize       = 1000
 )
 
 type request struct {
@@ -39,18 +34,20 @@ type RateLimiter struct {
 	mu       sync.Mutex
 	ctx      context.Context
 	cancel   context.CancelFunc
+	cfg      config.RateLimiterConfig
 	log      *slog.Logger
 }
 
-func New(api *bot.Bot, log *slog.Logger) *RateLimiter {
+func New(api *bot.Bot, cfg config.RateLimiterConfig, log *slog.Logger) *RateLimiter {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	rl := &RateLimiter{
 		api:      api,
-		queue:    make(chan request, queueSize),
+		queue:    make(chan request, cfg.QueueSize),
 		lastSent: make(map[int64]time.Time),
 		ctx:      ctx,
 		cancel:   cancel,
+		cfg:      cfg,
 		log:      log,
 	}
 
@@ -216,7 +213,7 @@ func (rl *RateLimiter) waitForTurn(req request) {
 		return
 	}
 
-	delay := getDelay(req.chatID, lastSent)
+	delay := rl.getDelay(req.chatID, lastSent)
 	if delay <= 0 {
 		return
 	}
@@ -254,19 +251,19 @@ func chatIDFromAny(raw any) (int64, error) {
 	}
 }
 
-func getDelay(
+func (rl *RateLimiter) getDelay(
 	chatID int64,
 	lastSent time.Time,
 ) time.Duration {
 	elapsed := time.Since(lastSent)
-	rate := getRate(chatID)
+	rate := rl.getRate(chatID)
 
 	return max(rate-elapsed, 0)
 }
 
-func getRate(chatID int64) time.Duration {
+func (rl *RateLimiter) getRate(chatID int64) time.Duration {
 	if chatID < 0 {
-		return groupChatRate
+		return rl.cfg.GroupChatRate
 	}
-	return privateChatRate
+	return rl.cfg.PrivateChatRate
 }

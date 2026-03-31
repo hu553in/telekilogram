@@ -10,19 +10,14 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"telekilogram/internal/config"
 	"telekilogram/internal/domain"
-	"time"
 
 	"telekilogram/internal/database"
 	"telekilogram/internal/summarizer"
 
 	"github.com/mmcdole/gofeed"
 	"mvdan.cc/xurls/v2"
-)
-
-const (
-	telegramClientTimeout                = 20 * time.Second
-	fetchFeedsMaxConcurrencyGrowthFactor = 10
 )
 
 type Fetcher struct {
@@ -36,14 +31,16 @@ type Fetcher struct {
 func NewFetcher(
 	db *database.Database,
 	s summarizer.Summarizer,
+	feedCfg config.FeedConfig,
+	telegramCfg config.TelegramConfig,
 	log *slog.Logger,
 ) *Fetcher {
 	libParser := gofeed.NewParser()
-	telegramClient := &http.Client{Timeout: telegramClientTimeout}
+	telegramClient := &http.Client{Timeout: telegramCfg.ClientTimeout}
 
 	return &Fetcher{
 		db:             db,
-		parser:         NewParser(db, s, libParser, telegramClient, log),
+		parser:         NewParser(db, s, libParser, telegramClient, feedCfg, telegramCfg, log),
 		libParser:      libParser,
 		telegramClient: telegramClient,
 		log:            log,
@@ -212,7 +209,7 @@ func (f *Fetcher) fetchFeeds(
 ) (map[int64][]domain.Post, error) {
 	var writeWg sync.WaitGroup
 
-	concurrency := min(runtime.NumCPU()*fetchFeedsMaxConcurrencyGrowthFactor, len(feeds))
+	concurrency := min(runtime.NumCPU()*f.parser.feedCfg.FetchFeedsMaxConcurrencyGrowthFactor, len(feeds))
 	semCh := make(chan struct{}, concurrency)
 
 	userPostCh := make(chan domain.UserPosts, concurrency)

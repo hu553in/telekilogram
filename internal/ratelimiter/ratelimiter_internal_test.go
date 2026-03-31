@@ -3,6 +3,7 @@ package ratelimiter
 import (
 	"context"
 	"errors"
+	"telekilogram/internal/config"
 	"testing"
 	"time"
 
@@ -12,6 +13,10 @@ import (
 
 func TestGetDelay(t *testing.T) {
 	now := time.Now()
+	cfg := config.RateLimiterConfig{
+		PrivateChatRate: time.Second,
+		GroupChatRate:   3 * time.Second,
+	}
 
 	tests := []struct {
 		name     string
@@ -47,7 +52,8 @@ func TestGetDelay(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := getDelay(test.chatID, test.lastSent)
+			rl := &RateLimiter{cfg: cfg}
+			got := rl.getDelay(test.chatID, test.lastSent)
 
 			if test.wantZero && got > 0 {
 				t.Errorf("Expected zero delay, got %v", got)
@@ -144,6 +150,11 @@ func TestHandleRequestSkipsCanceledRequest(t *testing.T) {
 }
 
 func TestGetRate(t *testing.T) {
+	cfg := config.RateLimiterConfig{
+		PrivateChatRate: time.Second,
+		GroupChatRate:   3 * time.Second,
+	}
+
 	tests := []struct {
 		name   string
 		chatID int64
@@ -152,18 +163,19 @@ func TestGetRate(t *testing.T) {
 		{
 			"PrivateChatRate",
 			1,
-			privateChatRate,
+			cfg.PrivateChatRate,
 		},
 		{
 			"GroupChatRate",
 			-1,
-			groupChatRate,
+			cfg.GroupChatRate,
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := getRate(test.chatID)
+			rl := &RateLimiter{cfg: cfg}
+			got := rl.getRate(test.chatID)
 
 			if got != test.want {
 				t.Errorf("Expected %v rate, got %v", test.want, got)

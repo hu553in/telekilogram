@@ -5,36 +5,24 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"telekilogram/internal/config"
 
 	"github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/option"
 	"github.com/openai/openai-go/v3/responses"
 )
 
-const (
-	baseMaxOutputTokens  int64 = 512
-	limitMaxOutputTokens int64 = 2048
-
-	systemPrompt = `Summarize the Telegram post in one ultra-short sentence.
-
-Rules:
-- ≤25 words (hard limit 40).
-- Include only core idea and critical context (dates, numbers, names, calls to action).
-- No lists, no examples — compress into one general statement.
-- Neutral tone.
-- Remove fillers, emojis, hashtags, links unless essential.
-- Output exactly one line in the same language as the input.`
-)
-
 // OpenAISummarizer calls OpenAI's Responses API to produce summaries.
 type OpenAISummarizer struct {
 	client openai.Client
+	cfg    config.OpenAIConfig
 }
 
 // NewOpenAISummarizer builds a new summarizer instance.
-func NewOpenAISummarizer(apiKey string) (*OpenAISummarizer, error) {
+func NewOpenAISummarizer(apiKey string, cfg config.OpenAIConfig) (*OpenAISummarizer, error) {
 	return &OpenAISummarizer{
 		client: openai.NewClient(option.WithAPIKey(apiKey)),
+		cfg:    cfg,
 	}, nil
 }
 
@@ -57,16 +45,16 @@ func (s *OpenAISummarizer) Summarize(
 	userPromptBuilder.WriteString("Content:\n")
 	userPromptBuilder.WriteString(text)
 
-	maxOutputTokens := baseMaxOutputTokens
+	maxOutputTokens := s.cfg.BaseMaxOutputTokens
 	for {
 		resp, err := s.client.Responses.New(ctx, responses.ResponseNewParams{
-			Model:           openai.ChatModelGPT5_4Nano,
-			ServiceTier:     responses.ResponseNewParamsServiceTierFlex,
+			Model:           s.cfg.AIModel,
+			ServiceTier:     responses.ResponseNewParamsServiceTier(s.cfg.ServiceTier),
 			MaxOutputTokens: openai.Int(maxOutputTokens),
 			Reasoning: responses.ReasoningParam{
-				Effort: openai.ReasoningEffortLow,
+				Effort: openai.ReasoningEffort(s.cfg.ReasoningEffort),
 			},
-			Instructions: openai.String(systemPrompt),
+			Instructions: openai.String(s.cfg.SystemPrompt),
 			Input: responses.ResponseNewParamsInputUnion{
 				OfString: openai.String(userPromptBuilder.String()),
 			},
@@ -76,10 +64,10 @@ func (s *OpenAISummarizer) Summarize(
 		}
 
 		if resp.Status == "incomplete" {
-			if resp.IncompleteDetails.Reason == "max_output_tokens" && maxOutputTokens < limitMaxOutputTokens {
-				maxOutputTokens *= 2
-				if maxOutputTokens > limitMaxOutputTokens {
-					maxOutputTokens = limitMaxOutputTokens
+			if resp.IncompleteDetails.Reason == "max_output_tokens" && maxOutputTokens < s.cfg.LimitMaxOutputTokens {
+				maxOutputTokens *= s.cfg.MaxOutputTokensGrowthFactor
+				if maxOutputTokens > s.cfg.LimitMaxOutputTokens {
+					maxOutputTokens = s.cfg.LimitMaxOutputTokens
 				}
 				continue
 			}
