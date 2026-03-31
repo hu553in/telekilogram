@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
@@ -29,19 +30,25 @@ func (b *Bot) sendMessageWithKeyboard(
 			"normalizedLen", len(normalizedText))
 	}
 
-	_, err := b.rateLimiter.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID: chatID,
-		Text:   normalizedText,
-		// See https://core.telegram.org/bots/api#markdownv2-style.
-		ParseMode: models.ParseModeMarkdown,
-		LinkPreviewOptions: &models.LinkPreviewOptions{
-			IsDisabled: bot.True(),
-		},
-		ReplyMarkup: &models.InlineKeyboardMarkup{
-			InlineKeyboard: keyboard,
-		},
-	})
-	return err
+	for _, chunk := range splitTelegramText(normalizedText) {
+		_, err := b.rateLimiter.SendMessage(ctx, &bot.SendMessageParams{
+			ChatID: chatID,
+			Text:   chunk,
+			// See https://core.telegram.org/bots/api#markdownv2-style.
+			ParseMode: models.ParseModeMarkdown,
+			LinkPreviewOptions: &models.LinkPreviewOptions{
+				IsDisabled: bot.True(),
+			},
+			ReplyMarkup: &models.InlineKeyboardMarkup{
+				InlineKeyboard: keyboard,
+			},
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func getReturnKeyboard() [][]models.InlineKeyboardButton {
@@ -83,4 +90,21 @@ func getSettingsAutoDigestHourUTCKeyboard() [][]models.InlineKeyboardButton {
 	}
 
 	return keyboard
+}
+
+func splitTelegramText(text string) []string {
+	if utf8.RuneCountInString(text) <= telegramMessageMaxLength {
+		return []string{text}
+	}
+
+	runes := []rune(text)
+	chunks := make([]string, 0, (len(runes)+telegramMessageMaxLength-1)/telegramMessageMaxLength)
+
+	for len(runes) > 0 {
+		size := min(telegramMessageMaxLength, len(runes))
+		chunks = append(chunks, string(runes[:size]))
+		runes = runes[size:]
+	}
+
+	return chunks
 }

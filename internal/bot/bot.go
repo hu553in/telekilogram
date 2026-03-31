@@ -2,6 +2,8 @@ package bot
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log/slog"
 	"slices"
 	"strings"
@@ -130,7 +132,12 @@ func (b *Bot) handleUpdate(ctx context.Context, update *models.Update) {
 		chatID := callbackChatID(update.CallbackQuery)
 		message := callbackMessage(update.CallbackQuery)
 		if message == nil {
-			err := b.answerCallbackError(updateCtx, update.CallbackQuery, "❌ Failed.")
+			err := b.answerCallbackError(
+				updateCtx,
+				update.CallbackQuery,
+				"❌ Couldn't complete request. Please try again.",
+				nil,
+			)
 
 			args := []any{
 				"callbackQueryID", update.CallbackQuery.ID,
@@ -207,14 +214,16 @@ func callbackMessage(cb *models.CallbackQuery) *models.Message {
 	return cb.Message.Message
 }
 
-func (b *Bot) answerCallbackError(ctx context.Context, callback *models.CallbackQuery, text string) error {
+func (b *Bot) answerCallbackError(ctx context.Context, callback *models.CallbackQuery, text string, err error) error {
 	if callback == nil {
 		return nil
 	}
 
-	_, err := b.rateLimiter.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{
+	if _, sendErr := b.rateLimiter.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{
 		CallbackQueryID: callback.ID,
 		Text:            text,
-	})
+	}); sendErr != nil {
+		return errors.Join(err, fmt.Errorf("answer callback query: %w", sendErr))
+	}
 	return err
 }

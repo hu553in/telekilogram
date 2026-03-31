@@ -27,7 +27,13 @@ type Scheduler struct {
 	log     *slog.Logger
 }
 
-func New(ctx context.Context, bot *bot.Bot, fetcher *feed.Fetcher, cfg config.SchedulerConfig, log *slog.Logger) *Scheduler {
+func New(
+	ctx context.Context,
+	bot *bot.Bot,
+	fetcher *feed.Fetcher,
+	cfg config.SchedulerConfig,
+	log *slog.Logger,
+) *Scheduler {
 	c := cron.New(cron.WithLocation(time.FixedZone(Timezone, TimezoneOffsetSeconds)))
 
 	return &Scheduler{

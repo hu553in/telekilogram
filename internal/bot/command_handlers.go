@@ -7,13 +7,11 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/go-telegram/bot"
 )
 
 const maxHourForAddingLeadingZero = 9
 
-const welcomeText = `🤖 *Welcome to Telekilogram\!*
+const welcomeTextBase = `🤖 *Welcome to Telekilogram\!*
 
 I'm your feed assistant\. I can help you:
 
@@ -45,7 +43,7 @@ func (b *Bot) handleStartCommand(
 		return b.handleUnfollowDeepLink(ctx, strings.TrimSpace(feedIDStr), chatID, userID)
 	}
 
-	return b.sendMessageWithKeyboard(ctx, chatID, welcomeText, b.menuKeyboard)
+	return b.sendMessageWithKeyboard(ctx, chatID, b.welcomeText(), b.menuKeyboard)
 }
 
 func (b *Bot) handleUnfollowDeepLink(
@@ -60,7 +58,12 @@ func (b *Bot) handleUnfollowDeepLink(
 	if err != nil {
 		errs := []error{fmt.Errorf("parse feedID: %w", err)}
 
-		sendErr := b.sendMessageWithKeyboard(ctx, chatID, "❌ Failed\\.", b.returnKeyboard)
+		sendErr := b.sendMessageWithKeyboard(
+			ctx,
+			chatID,
+			b.withIssueReportLink("❌ Couldn't parse unfollow link\\. Please open /list and try again\\."),
+			b.returnKeyboard,
+		)
 		if sendErr != nil {
 			errs = append(errs, fmt.Errorf("send message with keyboard: %w", sendErr))
 		}
@@ -71,7 +74,12 @@ func (b *Bot) handleUnfollowDeepLink(
 	if err = b.db.RemoveFeed(ctx, feedID); err != nil {
 		errs := []error{fmt.Errorf("remove feed: %w", err)}
 
-		sendErr := b.sendMessageWithKeyboard(ctx, chatID, "❌ Failed\\.", b.returnKeyboard)
+		sendErr := b.sendMessageWithKeyboard(
+			ctx,
+			chatID,
+			b.withIssueReportLink("❌ Couldn't unfollow feed\\. Please open /list and try again\\."),
+			b.returnKeyboard,
+		)
 		if sendErr != nil {
 			errs = append(errs, fmt.Errorf("send message with keyboard: %w", sendErr))
 		}
@@ -95,12 +103,15 @@ func (b *Bot) handleListCommand(ctx context.Context, chatID int64, userID int64)
 			errs = append(errs, fmt.Errorf("get user feeds: %w", err))
 		}
 
-		sendErr := b.sendMessageWithKeyboard(
-			ctx,
-			chatID,
-			"✖️ Feed list is empty or there is a bug\\.",
-			b.returnKeyboard,
-		)
+		messageText := `📭 You don't have any feeds yet\.
+
+Send a feed URL, a t\.me link, a @channel username, or forward a message from a public channel to add one\.`
+
+		if err != nil {
+			messageText = b.withIssueReportLink("❌ Couldn't load feed list\\. Please try again\\.")
+		}
+
+		sendErr := b.sendMessageWithKeyboard(ctx, chatID, messageText, b.returnKeyboard)
 		if sendErr != nil {
 			errs = append(errs, fmt.Errorf("send message with keyboard: %w", sendErr))
 		}
@@ -135,15 +146,14 @@ func (b *Bot) handleListCommand(ctx context.Context, chatID int64, userID int64)
 		if botInfoErr == nil {
 			fmt.Fprintf(
 				&message,
-				"%d\\. [%s](%s) \\[[unfollow](https://t\\.me/%s?start=unfollow_%d)\\]\n",
+				"%d\\. %s \\[[unfollow](https://t\\.me/%s?start=unfollow_%d)\\]\n",
 				i+1,
-				bot.EscapeMarkdownUnescaped(title),
-				url,
+				formatMarkdownLink(title, url),
 				botInfo.Username,
 				f.ID,
 			)
 		} else {
-			fmt.Fprintf(&message, "%d\\. [%s](%s)\n", i+1, bot.EscapeMarkdownUnescaped(title), url)
+			fmt.Fprintf(&message, "%d\\. %s\n", i+1, formatMarkdownLink(title, url))
 		}
 	}
 
@@ -167,12 +177,15 @@ func (b *Bot) handleDigestCommand(ctx context.Context, chatID int64, userID int6
 			errs = append(errs, fmt.Errorf("fetch user feeds: %w", err))
 		}
 
-		sendErr := b.sendMessageWithKeyboard(
-			ctx,
-			chatID,
-			"✖️ Feed list is empty or there is a bug\\.",
-			b.returnKeyboard,
-		)
+		messageText := `📭 No recent posts were found in the last 24 hours\.
+
+If you haven't added feeds yet, send a feed URL, a t\.me link, a @channel username, or forward a message from a public channel\.`
+
+		if err != nil {
+			messageText = b.withIssueReportLink("❌ Couldn't fetch digest\\. Please try again\\.")
+		}
+
+		sendErr := b.sendMessageWithKeyboard(ctx, chatID, messageText, b.returnKeyboard)
 		if sendErr != nil {
 			errs = append(errs, fmt.Errorf("send message with keyboard: %w", sendErr))
 		}
@@ -199,7 +212,12 @@ func (b *Bot) handleSettingsCommand(ctx context.Context, chatID int64, userID in
 	if err != nil {
 		errs := []error{fmt.Errorf("get user settings with default: %w", err)}
 
-		sendErr := b.sendMessageWithKeyboard(ctx, chatID, "❌ Failed\\.", b.returnKeyboard)
+		sendErr := b.sendMessageWithKeyboard(
+			ctx,
+			chatID,
+			b.withIssueReportLink("❌ Couldn't get settings\\. Please try again\\."),
+			b.returnKeyboard,
+		)
 		if sendErr != nil {
 			errs = append(errs, fmt.Errorf("send message with keyboard: %w", sendErr))
 		}

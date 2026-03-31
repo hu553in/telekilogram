@@ -9,11 +9,15 @@ import (
 	"slices"
 	"strings"
 	"telekilogram/internal/domain"
+	"unicode/utf8"
 
 	"github.com/go-telegram/bot"
 )
 
-const telegramMessageMaxLength = 4096
+const (
+	telegramMessageMaxLength      = 4096
+	telegramMarkdownLinkMaxLength = 512
+)
 
 type feedGroupKey struct {
 	ID    int64
@@ -42,8 +46,11 @@ func (b *Bot) formatPostsAsMessages(ctx context.Context, posts []domain.Post) []
 	var messages []string
 	var currentMessage strings.Builder
 
-	currentMessage.WriteString("📰 *New posts*\n\n")
-	headerLength := currentMessage.Len()
+	currentHeader := "📰 *New posts*\n\n"
+	currentMessage.WriteString(currentHeader)
+	currentHeaderLen := utf8.RuneCountInString(currentHeader)
+	currentLen := currentHeaderLen
+	hasContent := false
 
 	feedGroups := make(map[feedGroupKey][]domain.Post)
 
@@ -71,38 +78,47 @@ func (b *Bot) formatPostsAsMessages(ctx context.Context, posts []domain.Post) []
 	for _, key := range feedGroupKeys {
 		feedPosts := feedGroups[key]
 
-		feedHeader := fmt.Sprintf("📌 *[%s](%s)*\n\n", bot.EscapeMarkdownUnescaped(key.title), key.URL)
+		feedHeader := fmt.Sprintf("📌 *%s*\n\n", formatMarkdownLink(key.title, key.URL))
 		firstBulletPoint := fmt.Sprintf(
-			"– [%s](%s)\n\n",
-			bot.EscapeMarkdownUnescaped(feedPosts[0].Title),
-			feedPosts[0].URL,
+			"– %s\n\n",
+			formatMarkdownLink(feedPosts[0].Title, feedPosts[0].URL),
 		)
 
-		if currentMessage.Len()+
-			len(feedHeader)+
-			len(firstBulletPoint) > telegramMessageMaxLength {
+		if hasContent && currentLen+
+			utf8.RuneCountInString(feedHeader)+
+			utf8.RuneCountInString(firstBulletPoint) > telegramMessageMaxLength {
 			messages = append(messages, currentMessage.String())
 			currentMessage.Reset()
-			currentMessage.WriteString("📰 *New posts \\(continue\\)*\n\n")
+			currentHeader = "📰 *New posts \\(continue\\)*\n\n"
+			currentMessage.WriteString(currentHeader)
+			currentHeaderLen = utf8.RuneCountInString(currentHeader)
+			currentLen = currentHeaderLen
+			hasContent = false
 		}
 
 		currentMessage.WriteString(feedHeader)
+		currentLen += utf8.RuneCountInString(feedHeader)
 
 		for _, post := range feedPosts {
-			bulletPoint := fmt.Sprintf("– [%s](%s)\n\n", bot.EscapeMarkdownUnescaped(post.Title), post.URL)
+			bulletPoint := fmt.Sprintf("– %s\n\n", formatMarkdownLink(post.Title, post.URL))
 
-			if currentMessage.Len()+len(bulletPoint) > telegramMessageMaxLength {
+			if hasContent && currentLen+utf8.RuneCountInString(bulletPoint) > telegramMessageMaxLength {
 				messages = append(messages, currentMessage.String())
 				currentMessage.Reset()
-				currentMessage.WriteString("📰 *New posts \\(continue\\)*\n\n")
+				currentHeader = "📰 *New posts \\(continue\\)*\n\n"
+				currentMessage.WriteString(currentHeader)
 				currentMessage.WriteString(feedHeader)
+				currentHeaderLen = utf8.RuneCountInString(currentHeader)
+				currentLen = currentHeaderLen + utf8.RuneCountInString(feedHeader)
 			}
 
 			currentMessage.WriteString(bulletPoint)
+			currentLen += utf8.RuneCountInString(bulletPoint)
+			hasContent = true
 		}
 	}
 
-	if currentMessage.Len() > headerLength {
+	if hasContent {
 		messages = append(messages, currentMessage.String())
 	}
 	return messages
@@ -142,4 +158,23 @@ func (b *Bot) normalizePost(ctx context.Context, post domain.Post) (domain.Post,
 	}
 
 	return normalized, true
+}
+
+func formatMarkdownLink(title string, url string) string {
+	title = strings.TrimSpace(title)
+	if title == "" {
+		title = url
+	}
+	if utf8.RuneCountInString(title) > telegramMarkdownLinkMaxLength {
+		title = string([]rune(title)[:telegramMarkdownLinkMaxLength-3]) + "..."
+	}
+
+	escapedTitle := bot.EscapeMarkdownUnescaped(title)
+
+	url = strings.TrimSpace(url)
+	if url == "" {
+		return escapedTitle
+	}
+
+	return fmt.Sprintf("[%s](%s)", escapedTitle, url)
 }

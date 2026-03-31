@@ -65,10 +65,39 @@ and suitable for unattended operation.
 | `TELEGRAM_USER_AGENT`                            | No       | Chrome-like UA string | `User-Agent` header used for public Telegram page fetches.                                             |
 | `TELEGRAM_CLIENT_TIMEOUT`                        | No       | `20s`                 | HTTP timeout for Telegram page fetches.                                                                |
 | `BOT_UPDATE_PROCESSING_TIMEOUT`                  | No       | `60s`                 | Timeout for processing a single Telegram update.                                                       |
+| `BOT_ISSUE_URL`                                  | No       | GitHub issue URL      | Issue link shown in the welcome message and user-facing error messages.                                |
+
+Full defaults for shortened values are:
+
+- `OPENAI_SYSTEM_PROMPT`
+
+```
+Summarize the Telegram post in one ultra-short sentence.
+
+Rules:
+- ≤25 words (hard limit 40).
+- Include only core idea and critical context (dates, numbers, names, calls to action).
+- No lists, no examples — compress into one general statement.
+- Neutral tone.
+- Remove fillers, emojis, hashtags, links unless essential.
+- Output exactly one line in the same language as the input.
+```
+
+- `TELEGRAM_USER_AGENT`
+
+```
+Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36
+```
+
+- `BOT_ISSUE_URL`
+
+```
+https://github.com/hu553in/telekilogram/issues/new
+```
 
 ## Example configuration
 
-```
+```bash
 TOKEN="example"
 DB_PATH="db.sqlite"
 ALLOWED_USERS="1,2"
@@ -87,4 +116,5 @@ FEED_FALLBACK_TELEGRAM_SUMMARY_MAX_CHARS="200"
 FEED_FETCH_FEEDS_MAX_CONCURRENCY_GROWTH_FACTOR="10"
 TELEGRAM_CLIENT_TIMEOUT="20s"
 BOT_UPDATE_PROCESSING_TIMEOUT="60s"
+BOT_ISSUE_URL="https://github.com/hu553in/telekilogram/issues/new"
 ```

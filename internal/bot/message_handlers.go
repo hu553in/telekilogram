@@ -69,7 +69,9 @@ func (b *Bot) handleRandomText(
 		sendErr := b.sendMessageWithKeyboard(
 			ctx,
 			message.Chat.ID,
-			"✖️ Valid feed URLs are not found or there is a bug\\.",
+			b.withIssueReportLink(`❌ Couldn't find a supported public feed or Telegram channel\.
+
+Send a feed URL, a t\.me link, a @channel username, or forward a message from a public channel\.`),
 			b.returnKeyboard,
 		)
 		if sendErr != nil {
@@ -94,7 +96,13 @@ func (b *Bot) handleRandomText(
 	}
 
 	if added == 0 {
-		if err = b.sendMessageWithKeyboard(ctx, message.Chat.ID, "❌ Failed\\.", b.returnKeyboard); err != nil {
+		if err = b.sendMessageWithKeyboard(
+			ctx,
+			message.Chat.ID,
+			b.withIssueReportLink("❌ Couldn't add feed\\. "+
+				"Make sure the feed or Telegram channel is public and supported, then try again\\."),
+			b.returnKeyboard,
+		); err != nil {
 			errs = append(errs, fmt.Errorf("send message with keyboard: %w", err))
 
 			return errors.Join(errs...)
@@ -105,7 +113,7 @@ func (b *Bot) handleRandomText(
 		if err = b.sendMessageWithKeyboard(
 			ctx,
 			message.Chat.ID,
-			fmt.Sprintf("⚠️ Partial success \\(%d added\\)\\.", added),
+			fmt.Sprintf("⚠️ Added %d feed\\(s\\), but some items couldn't be added\\.", added),
 			b.returnKeyboard,
 		); err != nil {
 			errs = append(errs, fmt.Errorf("send message with keyboard: %w", err))
@@ -113,7 +121,12 @@ func (b *Bot) handleRandomText(
 		}
 	}
 
-	err = b.sendMessageWithKeyboard(ctx, message.Chat.ID, "✅ Success\\.", b.returnKeyboard)
+	err = b.sendMessageWithKeyboard(
+		ctx,
+		message.Chat.ID,
+		fmt.Sprintf("✅ Added %d feed\\(s\\)\\.", added),
+		b.returnKeyboard,
+	)
 	if err != nil {
 		return fmt.Errorf("send message with keyboard: %w", err)
 	}
@@ -136,7 +149,12 @@ func (b *Bot) handleForwardedChannel(
 			"chatID", chatID,
 			"userID", userID)
 
-		return b.sendMessageWithKeyboard(ctx, chatID, "❌ Failed\\.", b.returnKeyboard)
+		return b.sendMessageWithKeyboard(
+			ctx,
+			chatID,
+			b.withIssueReportLink("❌ Couldn't add channel\\. Make sure it is public and try again\\."),
+			b.returnKeyboard,
+		)
 	}
 
 	title := strings.TrimSpace(chat.Title)
@@ -151,7 +169,12 @@ func (b *Bot) handleForwardedChannel(
 	if err := b.db.AddFeed(ctx, userID, canonicalURL, title); err != nil {
 		errs := []error{fmt.Errorf("add feed: %w", err)}
 
-		sendErr := b.sendMessageWithKeyboard(ctx, chatID, "❌ Failed\\.", b.returnKeyboard)
+		sendErr := b.sendMessageWithKeyboard(
+			ctx,
+			chatID,
+			b.withIssueReportLink("❌ Couldn't add channel\\. Make sure it is public and try again\\."),
+			b.returnKeyboard,
+		)
 		if sendErr != nil {
 			errs = append(errs, fmt.Errorf("send message with keyboard: %w", sendErr))
 		}
@@ -159,5 +182,5 @@ func (b *Bot) handleForwardedChannel(
 		return errors.Join(errs...)
 	}
 
-	return b.sendMessageWithKeyboard(ctx, chatID, "✅ Success\\.", b.returnKeyboard)
+	return b.sendMessageWithKeyboard(ctx, chatID, "✅ Channel is added\\.", b.returnKeyboard)
 }

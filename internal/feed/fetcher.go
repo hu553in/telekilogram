@@ -73,6 +73,7 @@ func (f *Fetcher) FindValidFeeds(
 	}
 
 	urls := httpsURLRe.FindAllString(text, -1)
+	urls = append(urls, findTelegramChannelURLCandidates(text)...)
 
 	feeds := make([]domain.Feed, 0, len(urls)+len(slugs))
 	seen := make(map[string]struct{}, len(urls)+len(slugs))

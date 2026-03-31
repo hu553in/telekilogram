@@ -21,8 +21,9 @@ const (
 )
 
 var (
-	telegramSlugRe       = regexp.MustCompile(`^\w{5,32}$`)
-	telegramAtSignSlugRe = regexp.MustCompile(`(\s|^)@(\w{5,32})(\s|$)`)
+	telegramSlugRe             = regexp.MustCompile(`^\w{5,32}$`)
+	telegramAtSignSlugRe       = regexp.MustCompile(`(\s|^)@(\w{5,32})(\s|$)`)
+	telegramURLCandidateSlugRe = regexp.MustCompile(`(?i)t\.me/(?:s/)?[a-z][a-z0-9_]{3,30}[a-z0-9]`)
 )
 
 type channelItem struct {
@@ -253,4 +254,24 @@ func processFoundDocItem(s *goquery.Selection) (channelItem, error) {
 	}
 
 	return channelItem{URL: href, text: text, published: t}, nil
+}
+
+func findTelegramChannelURLCandidates(text string) []string {
+	matches := telegramURLCandidateSlugRe.FindAllString(text, -1)
+
+	seen := make(map[string]struct{}, len(matches))
+	result := make([]string, 0, len(matches))
+
+	for _, m := range matches {
+		m = "https://" + strings.ToLower(m)
+
+		if _, ok := seen[m]; ok {
+			continue
+		}
+
+		seen[m] = struct{}{}
+		result = append(result, m)
+	}
+
+	return result
 }

@@ -54,6 +54,7 @@ type TelegramConfig struct {
 
 type BotConfig struct {
 	UpdateProcessingTimeout time.Duration `env:"UPDATE_PROCESSING_TIMEOUT" envDefault:"60s"`
+	IssueURL                string        `env:"ISSUE_URL"                 envDefault:"https://github.com/hu553in/telekilogram/issues/new"`
 }
 
 func LoadConfig() Config {
