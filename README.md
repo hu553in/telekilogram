@@ -15,9 +15,7 @@ Telekilogram aggregates content from RSS, Atom, and JSON feeds, as well as publi
 daily digests and can optionally summarize Telegram posts using OpenAI. It is designed to be reliable, predictable,
 and suitable for unattended operation.
 
----
-
-## Functionality
+## Features
 
 - Follow RSS, Atom, and JSON feeds, as well as public Telegram channels:
   - send a feed URL
@@ -35,8 +33,6 @@ and suitable for unattended operation.
   - RSS, Atom, and JSON feeds: grouped digests with post titles and links
   - Telegram channels: grouped digests with AI-generated summaries (or trimmed text) linking to the original posts
 - Configure user-specific settings via `/settings`.
-
----
 
 ## Environment variables
 

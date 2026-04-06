@@ -1,4 +1,4 @@
-# Code of Conduct - Telekilogram
+# Code of Conduct — Telekilogram
 
 ## Our Pledge
 
