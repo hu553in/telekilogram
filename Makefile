@@ -9,10 +9,10 @@ ensure-build-dir:
 	mkdir -p $(BUILD_DIR)
 
 .PHONY: pre-commit
-pre-commit: build lint verify-test-coverage
+pre-commit: build lint check-deps verify-test-coverage
 
 .PHONY: check
-check: build fmt lint verify-test-coverage
+check: build fmt lint check-deps verify-test-coverage
 
 .PHONY: install-deps
 install-deps:
@@ -36,6 +36,10 @@ fmt:
 .PHONY: lint
 lint:
 	golangci-lint run
+
+.PHONY: check-deps
+check-deps: install-deps
+	go tool govulncheck ./...
 
 .PHONY: test
 test: ensure-build-dir install-deps
