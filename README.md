@@ -6,7 +6,7 @@
 [![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/hu553in/telekilogram)](https://github.com/hu553in/telekilogram/blob/main/go.mod)
 
 - [License](./LICENSE)
-- [How to contribute](./CONTRIBUTING.md)
+- [Contributing](./CONTRIBUTING.md)
 - [Code of conduct](./CODE_OF_CONDUCT.md)
 
 A Telegram bot for feed-based updates, written in Go.
