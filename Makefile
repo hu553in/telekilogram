@@ -2,8 +2,6 @@ BUILD_DIR ?= ./dist
 
 GOLANGCI_LINT_CONFIG_URL ?= https://raw.githubusercontent.com/maratori/golangci-lint-config/refs/heads/main/.golangci.yml
 
-MAIN_BRANCH ?= main
-
 .PHONY: ensure-build-dir
 ensure-build-dir:
 	mkdir -p $(BUILD_DIR)
