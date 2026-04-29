@@ -36,60 +36,21 @@ and suitable for unattended operation.
 
 ## Environment variables
 
-| Name                                             | Required | Default               | Description                                                                                            |
-| ------------------------------------------------ | -------- | --------------------- | ------------------------------------------------------------------------------------------------------ |
-| `TOKEN`                                          | Yes      | –                     | Telegram bot token.                                                                                    |
-| `DB_PATH`                                        | No       | `db.sqlite`           | Filesystem path to the SQLite database. The file is created automatically on first run.                |
-| `ALLOWED_USERS`                                  | No       | –                     | Comma-separated list of Telegram user IDs allowed to interact with the bot.                            |
-| `OPENAI_API_KEY`                                 | No       | –                     | Enables OpenAI-based summaries for Telegram channel posts. If unset, local truncation is used instead. |
-| `OPENAI_BASE_MAX_OUTPUT_TOKENS`                  | No       | `512`                 | Initial `max_output_tokens` for OpenAI summarization requests.                                         |
-| `OPENAI_LIMIT_MAX_OUTPUT_TOKENS`                 | No       | `2048`                | Maximum `max_output_tokens` reached after retry growth.                                                |
-| `OPENAI_MAX_OUTPUT_TOKENS_GROWTH_FACTOR`         | No       | `2`                   | Multiplier applied when retrying a truncated OpenAI response.                                          |
-| `OPENAI_SYSTEM_PROMPT`                           | No       | built-in prompt       | System prompt used for Telegram post summarization.                                                    |
-| `OPENAI_AI_MODEL`                                | No       | `gpt-5.4-nano`        | OpenAI model used for summarization.                                                                   |
-| `OPENAI_SERVICE_TIER`                            | No       | `flex`                | OpenAI Responses API service tier.                                                                     |
-| `OPENAI_REASONING_EFFORT`                        | No       | `low`                 | OpenAI reasoning effort for summarization requests.                                                    |
-| `SCHEDULER_CHECK_HOUR_FEEDS_TIMEOUT`             | No       | `15m`                 | Timeout for a scheduled hourly digest pass.                                                            |
-| `RATE_LIMITER_PRIVATE_CHAT_RATE`                 | No       | `1s`                  | Minimum delay between sends to the same private chat.                                                  |
-| `RATE_LIMITER_GROUP_CHAT_RATE`                   | No       | `3s`                  | Minimum delay between sends to the same group chat.                                                    |
-| `RATE_LIMITER_QUEUE_SIZE`                        | No       | `1000`                | Buffered queue size for outgoing Telegram operations.                                                  |
-| `FEED_TELEGRAM_SUMMARY_CACHE_MAX_ENTRIES`        | No       | `1024`                | Maximum size of the in-memory Telegram summary cache.                                                  |
-| `FEED_TELEGRAM_SUMMARIES_MAX_PARALLELISM`        | No       | `4`                   | Maximum number of parallel summarizations during Telegram feed parsing.                                |
-| `FEED_PARSE_FEED_GRACE_PERIOD`                   | No       | `10m`                 | Grace period added to the 24-hour post window.                                                         |
-| `FEED_FALLBACK_TELEGRAM_SUMMARY_MAX_CHARS`       | No       | `200`                 | Character limit for local fallback Telegram summaries.                                                 |
-| `FEED_FETCH_FEEDS_MAX_CONCURRENCY_GROWTH_FACTOR` | No       | `10`                  | Feed fetch concurrency multiplier relative to CPU count.                                               |
-| `TELEGRAM_USER_AGENT`                            | No       | Chrome-like UA string | `User-Agent` header used for public Telegram page fetches.                                             |
-| `TELEGRAM_CLIENT_TIMEOUT`                        | No       | `20s`                 | HTTP timeout for Telegram page fetches.                                                                |
-| `BOT_UPDATE_PROCESSING_TIMEOUT`                  | No       | `60s`                 | Timeout for processing a single Telegram update.                                                       |
-| `BOT_ISSUE_URL`                                  | No       | GitHub issue URL      | Issue link shown in the welcome message and user-facing error messages.                                |
+| Name                      | Required | Default        | Description                                                        |
+| ------------------------- | -------- | -------------- | ------------------------------------------------------------------ |
+| `TOKEN`                   | Yes      | –              | Telegram bot token                                                 |
+| `DB_PATH`                 | No       | `db.sqlite`    | SQLite database path                                               |
+| `ALLOWED_USERS`           | No       | –              | Comma-separated Telegram user IDs                                  |
+| `OPENAI_API_KEY`          | No       | –              | Enables OpenAI summaries (falls back to local truncation if unset) |
+| `OPENAI_AI_MODEL`         | No       | `gpt-5.4-nano` | OpenAI model                                                       |
+| `OPENAI_SERVICE_TIER`     | No       | `flex`         | OpenAI Responses API service tier                                  |
+| `OPENAI_REASONING_EFFORT` | No       | `low`          | OpenAI reasoning effort                                            |
 
-Full defaults for shortened values are:
+See `.env.example` for all available options including rate limits, scheduler timeouts,
+feed parsing parameters, and OpenAI tuning flags.
 
-- `OPENAI_SYSTEM_PROMPT`
-
-```
-Summarize the Telegram post in one ultra-short sentence.
-
-Rules:
-- ≤25 words (hard limit 40).
-- Include only core idea and critical context (dates, numbers, names, calls to action).
-- No lists, no examples — compress into one general statement.
-- Neutral tone.
-- Remove fillers, emojis, hashtags, links unless essential.
-- Output exactly one line in the same language as the input.
-```
-
-- `TELEGRAM_USER_AGENT`
-
-```
-Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36
-```
-
-- `BOT_ISSUE_URL`
-
-```
-https://github.com/hu553in/telekilogram/issues/new
-```
+See the source code or `.env.example` for full default values of `OPENAI_SYSTEM_PROMPT`,
+`TELEGRAM_USER_AGENT`, and `BOT_ISSUE_URL`.
 
 ## Example configuration
 
