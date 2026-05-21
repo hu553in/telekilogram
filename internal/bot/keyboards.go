@@ -102,6 +102,13 @@ func splitTelegramText(text string) []string {
 
 	for len(runes) > 0 {
 		size := min(telegramMessageMaxLength, len(runes))
+		for i := size - 1; i >= 0; i-- {
+			if runes[i] == '\n' {
+				size = i + 1
+				break
+			}
+		}
+
 		chunks = append(chunks, string(runes[:size]))
 		runes = runes[size:]
 	}

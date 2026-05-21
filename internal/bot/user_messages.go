@@ -1,7 +1,6 @@
 package bot
 
 import (
-	"fmt"
 	"strings"
 )
 
@@ -12,7 +11,7 @@ func (b *Bot) withIssueReportLink(text string) string {
 		return text
 	}
 
-	return text + "\n\nIf this keeps happening, [submit an issue](" + issueURL + ")\\."
+	return text + "\n\nIf this keeps happening, " + formatMarkdownLink("submit an issue", issueURL) + "\\."
 }
 
 func (b *Bot) welcomeText() string {
@@ -21,9 +20,8 @@ func (b *Bot) welcomeText() string {
 		return welcomeTextBase
 	}
 
-	return fmt.Sprintf(
-		"%s\n\nIn case of any issues you can report them [here](%s).",
-		welcomeTextBase,
+	return welcomeTextBase + "\n\nIn case of any issues you can report them " + formatMarkdownLink(
+		"here",
 		issueURL,
-	)
+	) + "\\."
 }

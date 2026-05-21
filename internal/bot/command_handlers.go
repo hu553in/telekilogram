@@ -144,13 +144,13 @@ Send a feed URL, a t\.me link, a @channel username, or forward a message from a 
 		}
 
 		if botInfoErr == nil {
+			unfollowURL := fmt.Sprintf("https://t.me/%s?start=unfollow_%d", botInfo.Username, f.ID)
 			fmt.Fprintf(
 				&message,
-				"%d\\. %s \\[[unfollow](https://t\\.me/%s?start=unfollow_%d)\\]\n",
+				"%d\\. %s \\[%s\\]\n",
 				i+1,
 				formatMarkdownLink(title, url),
-				botInfo.Username,
-				f.ID,
+				formatMarkdownLink("unfollow", unfollowURL),
 			)
 		} else {
 			fmt.Fprintf(&message, "%d\\. %s\n", i+1, formatMarkdownLink(title, url))

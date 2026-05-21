@@ -23,6 +23,16 @@ func TestWelcomeTextIncludesIssueLink(t *testing.T) {
 	}
 }
 
+func TestWelcomeTextEscapesIssueLinkURL(t *testing.T) {
+	b := botWithIssueURL(`https://example.com/issues(foo)\bar`)
+
+	got := b.welcomeText()
+
+	if !strings.Contains(got, `(https://example.com/issues(foo\)\\bar)`) {
+		t.Fatalf("welcomeText() should escape issue link URL, got %q", got)
+	}
+}
+
 func TestWelcomeTextWithoutIssueURL(t *testing.T) {
 	b := botWithIssueURL("")
 
@@ -43,6 +53,16 @@ func TestWithIssueReportLinkIncludesIssueURL(t *testing.T) {
 
 	if !strings.Contains(got, "[submit an issue](https://github.com/hu553in/telekilogram/issues/new)") {
 		t.Fatalf("withIssueReportLink() should include issue link, got %q", got)
+	}
+}
+
+func TestWithIssueReportLinkEscapesIssueURL(t *testing.T) {
+	b := botWithIssueURL(`https://example.com/issues(foo)\bar`)
+
+	got := b.withIssueReportLink("❌ Couldn't do this.\\.")
+
+	if !strings.Contains(got, `(https://example.com/issues(foo\)\\bar)`) {
+		t.Fatalf("withIssueReportLink() should escape issue URL, got %q", got)
 	}
 }
 
@@ -140,6 +160,40 @@ func TestSplitTelegramTextPreservesContent(t *testing.T) {
 	}
 }
 
+func TestSplitTelegramTextPrefersNewlineBoundary(t *testing.T) {
+	firstLine := strings.Repeat("a", telegramMessageMaxLength-10) + "\n"
+	secondLine := strings.Repeat("b", 20)
+
+	chunks := splitTelegramText(firstLine + secondLine)
+	if len(chunks) != 2 {
+		t.Fatalf("expected 2 chunks, got %d", len(chunks))
+	}
+	if chunks[0] != firstLine {
+		t.Fatalf("first chunk should end at newline, got %q", chunks[0])
+	}
+	if chunks[1] != secondLine {
+		t.Fatalf("second chunk should contain remaining text, got %q", chunks[1])
+	}
+}
+
+func TestSplitTelegramTextKeepsMarkdownListLinesTogether(t *testing.T) {
+	line := "[Example](https://example.com/" + strings.Repeat("a", 80) + ")\n"
+	text := strings.Repeat(line, telegramMessageMaxLength/len(line)+2)
+
+	chunks := splitTelegramText(text)
+	if len(chunks) < 2 {
+		t.Fatalf("expected multiple chunks, got %d", len(chunks))
+	}
+	if strings.Join(chunks, "") != text {
+		t.Fatal("rejoined chunks should equal original text")
+	}
+	for i, chunk := range chunks[:len(chunks)-1] {
+		if !strings.HasSuffix(chunk, "\n") {
+			t.Fatalf("chunk %d should end at a line boundary, got %q", i, chunk)
+		}
+	}
+}
+
 func TestFormatMarkdownLinkBasic(t *testing.T) {
 	got := formatMarkdownLink("Hello world", "https://example.com")
 
@@ -155,12 +209,23 @@ func TestFormatMarkdownLinkEmptyTitle(t *testing.T) {
 	url := "https://example.com"
 	got := formatMarkdownLink("", url)
 
-	// Empty title → URL is used as title, still formatted as a link.
+	// Empty title -> URL is used as title, still formatted as a link.
 	if !strings.Contains(got, "("+url+")") {
 		t.Fatalf("expected URL in link markup, got %q", got)
 	}
 	if !strings.HasPrefix(got, "[") {
 		t.Fatalf("expected link markup, got %q", got)
+	}
+}
+
+func TestFormatMarkdownLinkEmptyTitleTrimsURLTitle(t *testing.T) {
+	got := formatMarkdownLink("", "  https://example.com  ")
+
+	if strings.Contains(got, "[ ") || strings.Contains(got, " ]") {
+		t.Fatalf("fallback URL title should be trimmed, got %q", got)
+	}
+	if !strings.Contains(got, "(https://example.com)") {
+		t.Fatalf("trimmed URL should be used in link destination, got %q", got)
 	}
 }
 
@@ -182,6 +247,30 @@ func TestFormatMarkdownLinkBothEmpty(t *testing.T) {
 	}
 }
 
+func TestFormatMarkdownLinkBothBlank(t *testing.T) {
+	got := formatMarkdownLink("  \n\t  ", "  \n\t  ")
+	if got != "" {
+		t.Fatalf("both blank should return empty string, got %q", got)
+	}
+}
+
+func TestFormatMarkdownLinkNormalizesTitleWhitespace(t *testing.T) {
+	got := formatMarkdownLink("Hello\n\tworld  again", "https://example.com")
+
+	if !strings.HasPrefix(got, "[Hello world again]") {
+		t.Fatalf("title whitespace should be normalized, got %q", got)
+	}
+}
+
+func TestFormatMarkdownLinkEscapesTitleMarkdownV2Chars(t *testing.T) {
+	got := formatMarkdownLink("_*[]()~`>#+-=|{}.!", "")
+	want := "\\_\\*\\[\\]\\(\\)\\~\\`\\>\\#\\+\\-\\=\\|\\{\\}\\.\\!"
+
+	if got != want {
+		t.Fatalf("expected escaped title %q, got %q", want, got)
+	}
+}
+
 func TestFormatMarkdownLinkTruncatesLongTitle(t *testing.T) {
 	// "A" has no special Markdown chars, so escapedTitle is just "A"s.
 	title := strings.Repeat("A", telegramMarkdownLinkMaxLength+10)
@@ -194,6 +283,24 @@ func TestFormatMarkdownLinkTruncatesLongTitle(t *testing.T) {
 	}
 	if !strings.Contains(got, "(https://example.com)") {
 		t.Fatalf("truncated link should still contain URL, got %q", got)
+	}
+}
+
+func TestEscapeMarkdownLinkURLOnlyEscapesURLDelimiters(t *testing.T) {
+	got := escapeMarkdownLinkURL(`https://example.com/a_b(c).x?x=1#y\z`)
+	want := `https://example.com/a_b(c\).x?x=1#y\\z`
+
+	if got != want {
+		t.Fatalf("expected escaped URL %q, got %q", want, got)
+	}
+}
+
+func TestFormatMarkdownLinkEscapesURLDelimiters(t *testing.T) {
+	got := formatMarkdownLink("Hello", `https://example.com/path(foo)\bar`)
+	wantURL := `(https://example.com/path(foo\)\\bar)`
+
+	if !strings.Contains(got, wantURL) {
+		t.Fatalf("expected escaped URL %q in link markup, got %q", wantURL, got)
 	}
 }
 

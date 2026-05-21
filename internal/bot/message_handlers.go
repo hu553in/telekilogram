@@ -10,10 +10,12 @@ import (
 	"github.com/go-telegram/bot/models"
 )
 
-const filterText = `Telekilogram does not support filtering\.\.\.
+func filterText() string {
+	return `Telekilogram does not support filtering\.\.\.
 
-But you can use awesome [siftrss](https://siftrss.com/) instead\! ✨
+But you can use awesome ` + formatMarkdownLink("siftrss", "https://siftrss.com/") + ` instead\! ✨
 It's totally great\. Bot author is also using it\.`
+}
 
 func (b *Bot) handleMessage(ctx context.Context, message *models.Message) error {
 	return b.withSpinner(ctx, message.Chat.ID, func() error {
@@ -41,7 +43,7 @@ func (b *Bot) handleMessage(ctx context.Context, message *models.Message) error 
 		case strings.HasPrefix(text, "/digest"):
 			return b.handleDigestCommand(ctx, message.Chat.ID, message.From.ID)
 		case strings.HasPrefix(text, "/filter"):
-			return b.sendMessageWithKeyboard(ctx, message.Chat.ID, filterText, b.menuKeyboard)
+			return b.sendMessageWithKeyboard(ctx, message.Chat.ID, filterText(), b.menuKeyboard)
 		case strings.HasPrefix(text, "/settings"):
 			return b.handleSettingsCommand(ctx, message.Chat.ID, message.From.ID)
 		default:

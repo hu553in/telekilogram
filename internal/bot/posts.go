@@ -10,14 +10,9 @@ import (
 	"strings"
 	"telekilogram/internal/domain"
 	"unicode/utf8"
-
-	"github.com/go-telegram/bot"
 )
 
-const (
-	telegramMessageMaxLength      = 4096
-	telegramMarkdownLinkMaxLength = 512
-)
+const telegramMessageMaxLength = 4096
 
 type feedGroupKey struct {
 	ID    int64
@@ -158,23 +153,4 @@ func (b *Bot) normalizePost(ctx context.Context, post domain.Post) (domain.Post,
 	}
 
 	return normalized, true
-}
-
-func formatMarkdownLink(title string, url string) string {
-	title = strings.TrimSpace(title)
-	if title == "" {
-		title = url
-	}
-	if utf8.RuneCountInString(title) > telegramMarkdownLinkMaxLength {
-		title = string([]rune(title)[:telegramMarkdownLinkMaxLength-3]) + "..."
-	}
-
-	escapedTitle := bot.EscapeMarkdownUnescaped(title)
-
-	url = strings.TrimSpace(url)
-	if url == "" {
-		return escapedTitle
-	}
-
-	return fmt.Sprintf("[%s](%s)", escapedTitle, url)
 }
