@@ -7,15 +7,15 @@ require (
 	github.com/caarlos0/env/v11 v11.4.1
 	github.com/go-telegram/bot v1.21.0
 	github.com/golang-migrate/migrate/v4 v4.19.1
-	github.com/mattn/go-sqlite3 v1.14.44
+	github.com/mattn/go-sqlite3 v1.14.45
 	github.com/mmcdole/gofeed v1.3.0
-	github.com/openai/openai-go/v3 v3.37.0
+	github.com/openai/openai-go/v3 v3.39.0
 	github.com/robfig/cron/v3 v3.0.1
 	mvdan.cc/xurls/v2 v2.6.0
 )
 
 require (
-	github.com/andybalholm/cascadia v1.3.3 // indirect
+	github.com/andybalholm/cascadia v1.3.4 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/mmcdole/goxpp v1.1.1 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
