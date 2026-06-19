@@ -1,0 +1,188 @@
+package bot
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"strings"
+	"telekilogram/internal/feed"
+
+	"github.com/go-telegram/bot/models"
+)
+
+func filterText() string {
+	return `Telekilogram does not support filtering\.\.\.
+
+But you can use awesome ` + formatMarkdownLink("siftrss", "https://siftrss.com/") + ` instead\! ✨
+It's totally great\. Bot author is also using it\.`
+}
+
+func (b *Bot) handleMessage(ctx context.Context, message *models.Message) error {
+	return b.withSpinner(ctx, message.Chat.ID, func() error {
+		if message.ForwardOrigin != nil && // If message is forwarded...
+			message.ForwardOrigin.Type == models.MessageOriginTypeChannel && // ...from channel...
+			message.ForwardOrigin.MessageOriginChannel != nil &&
+			message.ForwardOrigin.MessageOriginChannel.Chat.Username != "" { // ...with public user name.
+			return b.handleForwardedChannel(
+				ctx,
+				&message.ForwardOrigin.MessageOriginChannel.Chat,
+				message.Chat.ID,
+				message.From.ID,
+			)
+		}
+
+		text := strings.TrimSpace(message.Text)
+
+		switch {
+		case strings.HasPrefix(text, "/start"):
+			return b.handleStartCommand(ctx, text, message.Chat.ID, message.From.ID)
+		case strings.HasPrefix(text, "/menu"):
+			return b.handleMenuCommand(ctx, message.Chat.ID)
+		case strings.HasPrefix(text, "/list"):
+			return b.handleListCommand(ctx, message.Chat.ID, message.From.ID)
+		case strings.HasPrefix(text, "/digest"):
+			return b.handleDigestCommand(ctx, message.Chat.ID, message.From.ID)
+		case strings.HasPrefix(text, "/filter"):
+			return b.sendMessageWithKeyboard(ctx, message.Chat.ID, filterText(), b.menuKeyboard)
+		case strings.HasPrefix(text, "/settings"):
+			return b.handleSettingsCommand(ctx, message.Chat.ID, message.From.ID)
+		default:
+			return b.handleRandomText(ctx, text, message.From.ID, message)
+		}
+	})
+}
+
+func (b *Bot) handleRandomText(
+	ctx context.Context,
+	text string,
+	userID int64,
+	message *models.Message,
+) error {
+	text = strings.TrimSpace(text)
+
+	feeds, err := b.fetcher.FindValidFeeds(ctx, text)
+
+	if len(feeds) == 0 {
+		var errs []error
+		if err != nil {
+			errs = append(errs, fmt.Errorf("find valid feeds: %w", err))
+		}
+
+		sendErr := b.sendMessageWithKeyboard(
+			ctx,
+			message.Chat.ID,
+			b.withIssueReportLink(`❌ Couldn't find a supported public feed or Telegram channel\.
+
+Send a feed URL, a t\.me link, a @channel username, or forward a message from a public channel\.`),
+			b.returnKeyboard,
+		)
+		if sendErr != nil {
+			errs = append(errs, fmt.Errorf("send message with keyboard: %w", sendErr))
+		}
+
+		return errors.Join(errs...)
+	}
+
+	var errs []error
+	if err != nil {
+		errs = append(errs, fmt.Errorf("find valid feeds: %w", err))
+	}
+
+	added := 0
+	for _, feed := range feeds {
+		if err = b.db.AddFeed(ctx, userID, feed.URL, feed.Title); err != nil {
+			errs = append(errs, fmt.Errorf("add feed: %w", err))
+		} else {
+			added++
+		}
+	}
+
+	if added == 0 {
+		if err = b.sendMessageWithKeyboard(
+			ctx,
+			message.Chat.ID,
+			b.withIssueReportLink("❌ Couldn't add feed\\. "+
+				"Make sure the feed or Telegram channel is public and supported, then try again\\."),
+			b.returnKeyboard,
+		); err != nil {
+			errs = append(errs, fmt.Errorf("send message with keyboard: %w", err))
+
+			return errors.Join(errs...)
+		}
+	}
+
+	if len(errs) > 0 {
+		if err = b.sendMessageWithKeyboard(
+			ctx,
+			message.Chat.ID,
+			fmt.Sprintf("⚠️ Added %d feed\\(s\\), but some items couldn't be added\\.", added),
+			b.returnKeyboard,
+		); err != nil {
+			errs = append(errs, fmt.Errorf("send message with keyboard: %w", err))
+			return errors.Join(errs...)
+		}
+	}
+
+	err = b.sendMessageWithKeyboard(
+		ctx,
+		message.Chat.ID,
+		fmt.Sprintf("✅ Added %d feed\\(s\\)\\.", added),
+		b.returnKeyboard,
+	)
+	if err != nil {
+		return fmt.Errorf("send message with keyboard: %w", err)
+	}
+
+	return nil
+}
+
+func (b *Bot) handleForwardedChannel(
+	ctx context.Context,
+	chat *models.Chat,
+	chatID int64,
+	userID int64,
+) error {
+	slug := strings.TrimSpace(chat.Username)
+
+	canonicalURL := feed.TelegramChannelCanonicalURL(slug)
+	if canonicalURL == "" {
+		b.log.WarnContext(ctx, "Empty canonical URL for forwarded channel",
+			"slug", slug,
+			"chatID", chatID,
+			"userID", userID)
+
+		return b.sendMessageWithKeyboard(
+			ctx,
+			chatID,
+			b.withIssueReportLink("❌ Couldn't add channel\\. Make sure it is public and try again\\."),
+			b.returnKeyboard,
+		)
+	}
+
+	title := strings.TrimSpace(chat.Title)
+	if title == "" {
+		b.log.WarnContext(ctx, "Empty Telegram channel title",
+			"canonicalURL", canonicalURL,
+			"slug", slug)
+
+		title = canonicalURL
+	}
+
+	if err := b.db.AddFeed(ctx, userID, canonicalURL, title); err != nil {
+		errs := []error{fmt.Errorf("add feed: %w", err)}
+
+		sendErr := b.sendMessageWithKeyboard(
+			ctx,
+			chatID,
+			b.withIssueReportLink("❌ Couldn't add channel\\. Make sure it is public and try again\\."),
+			b.returnKeyboard,
+		)
+		if sendErr != nil {
+			errs = append(errs, fmt.Errorf("send message with keyboard: %w", sendErr))
+		}
+
+		return errors.Join(errs...)
+	}
+
+	return b.sendMessageWithKeyboard(ctx, chatID, "✅ Channel is added\\.", b.returnKeyboard)
+}
