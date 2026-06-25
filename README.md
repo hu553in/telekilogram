@@ -4,37 +4,46 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/hu553in/telekilogram)](https://goreportcard.com/report/github.com/hu553in/telekilogram)
 [![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/hu553in/telekilogram)](https://github.com/hu553in/telekilogram/blob/main/go.mod)
 
-- [License](./LICENSE)
-- [Contributing](./CONTRIBUTING.md)
-- [Code of conduct](./CODE_OF_CONDUCT.md)
-
 A Telegram bot for feed-based updates, written in Go.
 
 Telekilogram aggregates content from RSS, Atom, and JSON feeds, as well as public Telegram channels.
 It delivers daily digests and can optionally summarize Telegram posts using OpenAI. It is built for
 unattended operation with predictable behavior.
 
-## Features
+## What it does
 
-- Follow RSS, Atom, and JSON feeds, as well as public Telegram channels. Supported inputs:
-  - feed URL
-  - channel `@username`
-  - forwarded message from a channel
-- View the current feed list with `/list`.
-- Unfollow feeds directly from the list.
-- Receive an automatic 24-hour digest every day (default: 00:00 UTC).
-- Request a 24-hour digest manually with `/digest`.
-- Telegram channel summaries with OpenAI:
-  - automatic fallback to local text truncation when `OPENAI_API_KEY` is not set
-  - 24-hour summary cache to avoid reprocessing the same post across users
-  - cache invalidation when a Telegram post is edited
-- Message formatting:
-  - RSS, Atom, and JSON feeds: grouped digests with post titles and links
-  - Telegram channels: grouped digests with AI-generated summaries (or trimmed text) linking to the
-    original posts
-- Configure user-specific settings via `/settings`.
+- Follows RSS, Atom, JSON feeds, and public Telegram channels
+- Accepts feed URLs, channel `@username` values, and forwarded channel messages
+- Sends an automatic daily digest and supports manual `/digest`
+- Lists and removes subscriptions from Telegram
+- Optionally summarizes Telegram posts through OpenAI
+- Falls back to local text truncation when `OPENAI_API_KEY` is unset
+- Stores feeds, settings, and digest state in SQLite
 
-## Environment variables
+## Requirements
+
+- Go 1.26+
+- Telegram bot token
+- Writable SQLite database path
+- Optional: Docker for the published image
+- Optional: OpenAI API key for Telegram post summaries
+
+## Setup
+
+Local checkout:
+
+```bash
+make install-deps
+cp .env.example .env
+```
+
+Docker image:
+
+```bash
+docker pull ghcr.io/hu553in/telekilogram:latest
+```
+
+## Configuration
 
 | Name                      | Required | Default        | Description                                                        |
 | ------------------------- | -------- | -------------- | ------------------------------------------------------------------ |
@@ -49,40 +58,63 @@ unattended operation with predictable behavior.
 See `.env.example` for all available options including rate limits, scheduler timeouts, feed parsing
 parameters, and OpenAI tuning flags.
 
-See the source code or `.env.example` for full default values of `OPENAI_SYSTEM_PROMPT`,
-`TELEGRAM_USER_AGENT`, and `BOT_ISSUE_URL`.
+`OPENAI_SYSTEM_PROMPT`, `TELEGRAM_USER_AGENT`, and `BOT_ISSUE_URL` have long defaults; keep them in
+`.env.example` instead of duplicating them here.
 
-## Example configuration
+## Usage
 
-```env
-TOKEN="example"
-DB_PATH="db.sqlite"
-ALLOWED_USERS="1,2"
-OPENAI_API_KEY="example"
-OPENAI_AI_MODEL="gpt-5.4-nano"
-OPENAI_SERVICE_TIER="flex"
-OPENAI_REASONING_EFFORT="low"
-SCHEDULER_CHECK_HOUR_FEEDS_TIMEOUT="15m"
-RATE_LIMITER_PRIVATE_CHAT_RATE="1s"
-RATE_LIMITER_GROUP_CHAT_RATE="3s"
-RATE_LIMITER_QUEUE_SIZE="1000"
-FEED_TELEGRAM_SUMMARY_CACHE_MAX_ENTRIES="1024"
-FEED_TELEGRAM_SUMMARIES_MAX_PARALLELISM="4"
-FEED_PARSE_FEED_GRACE_PERIOD="10m"
-FEED_FALLBACK_TELEGRAM_SUMMARY_MAX_CHARS="200"
-FEED_FETCH_FEEDS_MAX_CONCURRENCY_GROWTH_FACTOR="10"
-TELEGRAM_CLIENT_TIMEOUT="20s"
-BOT_UPDATE_PROCESSING_TIMEOUT="60s"
-BOT_ISSUE_URL="https://github.com/hu553in/telekilogram/issues/new"
+Local:
+
+```bash
+make build
+dist/telekilogram
 ```
 
-## Development
+Docker:
 
-Useful commands:
+```bash
+docker run --rm --env-file .env -v telekilogram_data:/data ghcr.io/hu553in/telekilogram:latest
+```
+
+Telegram UI:
+
+- send a feed URL, `t.me` link, `@channel`, or forwarded public channel message to add a source
+- `/list` or `Feed list` - show subscriptions
+- unfollow feeds from the list
+- receive an automatic 24-hour digest every day (default: 00:00 UTC)
+- `/digest` or `24h digest` - send a 24-hour digest now
+- Telegram channel posts get concise summaries when OpenAI is configured
+- `/settings` or `Settings` - configure user-specific settings
+
+## Runtime behavior
+
+- `DB_PATH` controls the SQLite database path; in Docker, the image runs from `/data`
+- `ALLOWED_USERS` is optional; when empty, the bot is public
+- OpenAI summaries are disabled when `OPENAI_API_KEY` is unset
+- Telegram summaries use a 24-hour cache and invalidate when a Telegram post is edited
+- RSS, Atom, and JSON feed digests include post titles and links
+- Telegram digests include summaries or trimmed text with links to the original posts
+
+## Development
 
 ```bash
 make install-deps
 make check
+```
+
+Focused checks:
+
+```bash
+make fmt
+make lint
+make check-deps
+make test
+make verify-test-coverage
+```
+
+Build and generated SQL:
+
+```bash
 make build
 make sqlc
 ```

@@ -28,9 +28,11 @@ RUN --mount=type=cache,target=/var/cache/apt \
   curl
 
 RUN groupadd --gid 10001 app \
-  && useradd --uid 10001 --gid 10001 -M app
+  && useradd --uid 10001 --gid 10001 -M app \
+  && install -d -m 0750 -o app -g app /data
 
 COPY --from=builder /dist/telekilogram /usr/local/bin/telekilogram
 
+WORKDIR /data
 USER app
 ENTRYPOINT ["/usr/local/bin/telekilogram"]
