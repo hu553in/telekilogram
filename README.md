@@ -40,7 +40,7 @@ cp .env.example .env
 Docker image:
 
 ```bash
-docker pull ghcr.io/hu553in/telekilogram:latest
+docker pull ghcr.io/hu553in/telekilogram
 ```
 
 ## Configuration
@@ -73,7 +73,7 @@ dist/telekilogram
 Docker:
 
 ```bash
-docker run --rm --env-file .env -v telekilogram_data:/data ghcr.io/hu553in/telekilogram:latest
+docker run --rm --env-file .env -v telekilogram_data:/data ghcr.io/hu553in/telekilogram
 ```
 
 Telegram UI:
