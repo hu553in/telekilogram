@@ -23,8 +23,8 @@ type OpenAIConfig struct {
 	BaseMaxOutputTokens         int64  `env:"BASE_MAX_OUTPUT_TOKENS"          envDefault:"512"`
 	LimitMaxOutputTokens        int64  `env:"LIMIT_MAX_OUTPUT_TOKENS"         envDefault:"2048"`
 	MaxOutputTokensGrowthFactor int64  `env:"MAX_OUTPUT_TOKENS_GROWTH_FACTOR" envDefault:"2"`
-	SystemPrompt                string `env:"SYSTEM_PROMPT"                   envDefault:"Summarize the Telegram post in one ultra-short sentence.\n\nRules:\n- ≤25 words (hard limit 40).\n- Include only core idea and critical context (dates, numbers, names, calls to action).\n- No lists, no examples — compress into one general statement.\n- Neutral tone.\n- Remove fillers, emojis, hashtags, links unless essential.\n- Output exactly one line in the same language as the input."`
-	AIModel                     string `env:"AI_MODEL"                        envDefault:"gpt-5.4-nano"`
+	SystemPrompt                string `env:"SYSTEM_PROMPT"                   envDefault:"Summarize the Telegram post in one sentence.\n\nRequirements:\n- Preserve the core idea and critical context, including essential dates, numbers, names, and calls to action.\n- Aim for 25 words or fewer; never exceed 40.\n- Compress lists and examples into one general statement.\n- Use a neutral tone.\n- Omit fillers, emojis, hashtags, and links unless essential.\n- Return exactly one line in the same language as the input."`
+	AIModel                     string `env:"AI_MODEL"                        envDefault:"gpt-5.6-luna"`
 	ServiceTier                 string `env:"SERVICE_TIER"                    envDefault:"flex"`
 	ReasoningEffort             string `env:"REASONING_EFFORT"                envDefault:"low"`
 }

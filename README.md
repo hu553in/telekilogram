@@ -51,7 +51,7 @@ docker pull ghcr.io/hu553in/telekilogram
 | `DB_PATH`                 | No       | `db.sqlite`    | SQLite database path                                               |
 | `ALLOWED_USERS`           | No       | -              | Comma-separated Telegram user IDs                                  |
 | `OPENAI_API_KEY`          | No       | -              | Enables OpenAI summaries (falls back to local truncation if unset) |
-| `OPENAI_AI_MODEL`         | No       | `gpt-5.4-nano` | OpenAI model                                                       |
+| `OPENAI_AI_MODEL`         | No       | `gpt-5.6-luna` | OpenAI model                                                       |
 | `OPENAI_SERVICE_TIER`     | No       | `flex`         | OpenAI Responses API service tier                                  |
 | `OPENAI_REASONING_EFFORT` | No       | `low`          | OpenAI reasoning effort                                            |
 
