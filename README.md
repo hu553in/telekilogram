@@ -4,11 +4,8 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/hu553in/telekilogram)](https://goreportcard.com/report/github.com/hu553in/telekilogram)
 [![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/hu553in/telekilogram)](https://github.com/hu553in/telekilogram/blob/main/go.mod)
 
-A Telegram bot for feed-based updates, written in Go.
-
-Telekilogram aggregates content from RSS, Atom, and JSON feeds, as well as public Telegram channels.
-It delivers daily digests and can optionally summarize Telegram posts using OpenAI. It is built for
-unattended operation with predictable behavior.
+Go Telegram bot for RSS, Atom, and JSON feed digests and public Telegram channel summaries. It
+delivers scheduled and on-demand digests, with optional OpenAI summaries for Telegram posts.
 
 ## What it does
 
@@ -23,6 +20,8 @@ unattended operation with predictable behavior.
 ## Requirements
 
 - Go 1.26+
+- Golangci-lint v2 for local checks
+- Bun and [prek](https://prek.j178.dev/) for repository-wide formatting and git hooks
 - Telegram bot token
 - Writable SQLite database path
 - Optional: Docker for the published image
@@ -37,10 +36,10 @@ make install-deps
 cp .env.example .env
 ```
 
-Docker image:
+Docker image (`latest` follows `main`; use a published `sha-*` tag for an immutable deployment):
 
 ```bash
-docker pull ghcr.io/hu553in/telekilogram
+docker pull ghcr.io/hu553in/telekilogram:latest
 ```
 
 ## Configuration
@@ -73,7 +72,7 @@ dist/telekilogram
 Docker:
 
 ```bash
-docker run --rm --env-file .env -v telekilogram_data:/data ghcr.io/hu553in/telekilogram
+docker run --rm --env-file .env -v telekilogram_data:/data ghcr.io/hu553in/telekilogram:latest
 ```
 
 Telegram UI:
@@ -99,15 +98,20 @@ Telegram UI:
 
 ```bash
 make install-deps
+prek install
 make check
 ```
+
+Use `make check-fix` to apply formatting before running the same full gate.
 
 Focused checks:
 
 ```bash
-make fmt
 make lint
+make lint-fix
+make check-generated
 make check-deps
+make check-vulns
 make test
 make verify-test-coverage
 ```
