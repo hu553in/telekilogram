@@ -19,7 +19,7 @@ delivers scheduled and on-demand digests, with optional OpenAI summaries for Tel
 
 ## Requirements
 
-- Go 1.26+
+- Go
 - Golangci-lint v2 for local checks
 - Bun and [prek](https://prek.j178.dev/) for repository-wide formatting and git hooks
 - Telegram bot token

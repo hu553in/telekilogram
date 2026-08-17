@@ -5,6 +5,7 @@ BUILD_DIR ?= ./dist
 PRETTIER := bunx prettier -u
 ACTIONLINT := bunx github-actionlint
 TAPLO := bunx @taplo/cli
+PREK ?= prek
 
 .PHONY: ensure-build-dir
 ensure-build-dir:
@@ -14,8 +15,16 @@ ensure-build-dir:
 check-workflows:
 	$(ACTIONLINT)
 
+.PHONY: check-renovate
+check-renovate:
+	bunx --package renovate renovate-config-validator --strict --no-global renovate.json
+
+.PHONY: check-hooks
+check-hooks:
+	$(PREK) validate-config prek.toml
+
 .PHONY: check
-check: lint build check-generated check-deps check-vulns verify-test-coverage check-workflows
+check: lint check-hooks build check-generated check-deps check-vulns verify-test-coverage check-renovate check-workflows
 
 .PHONY: check-fix
 check-fix: lint-fix

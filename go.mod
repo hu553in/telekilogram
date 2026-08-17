@@ -1,6 +1,6 @@
 module telekilogram
 
-go 1.26.5
+go 1.26.6
 
 require (
 	github.com/PuerkitoBio/goquery v1.12.0
@@ -8,7 +8,7 @@ require (
 	github.com/go-telegram/bot v1.23.0
 	github.com/golang-migrate/migrate/v4 v4.19.1
 	github.com/mattn/go-sqlite3 v1.14.49
-	github.com/mmcdole/gofeed v1.4.0
+	github.com/mmcdole/gofeed v1.4.1
 	github.com/openai/openai-go/v3 v3.50.0
 	github.com/robfig/cron/v3 v3.0.1
 	mvdan.cc/xurls/v2 v2.6.0
