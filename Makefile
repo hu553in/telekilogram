@@ -9,7 +9,7 @@ PREK ?= prek
 
 .PHONY: ensure-build-dir
 ensure-build-dir:
-	mkdir -p $(BUILD_DIR)
+	mkdir -p -- "$(BUILD_DIR)"
 
 .PHONY: check-workflows
 check-workflows:
@@ -72,16 +72,16 @@ test: ensure-build-dir install-deps
 
 .PHONY: verify-test-coverage
 verify-test-coverage: test
-	go tool go-test-coverage --config=./.testcoverage.yml
+	go tool go-test-coverage --config=./.testcoverage.yml --profile="$(BUILD_DIR)/coverage.out"
 
 .PHONY: build
 build: ensure-build-dir install-deps
 	CGO_ENABLED=1 GOFLAGS="-buildvcs=false" \
-	go build -trimpath -ldflags="-s -w" -o $(BUILD_DIR)/telekilogram ./cmd
+	go build -trimpath -ldflags="-s -w" -o "$(BUILD_DIR)/telekilogram" ./cmd
 
 .PHONY: clean
 clean:
-	rm -rf $(BUILD_DIR)
+	rm -rf -- "$(BUILD_DIR)"
 
 .PHONY: sqlc
 sqlc:

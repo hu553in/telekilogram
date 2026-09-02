@@ -11,7 +11,8 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 COPY cmd/ ./cmd/
 COPY internal/ ./internal/
 
-RUN --mount=type=cache,target=/root/.cache/go-build \
+RUN --mount=type=cache,target=/go/pkg/mod \
+  --mount=type=cache,target=/root/.cache/go-build \
   CGO_ENABLED=1 GOFLAGS="-buildvcs=false" \
   go build -trimpath -ldflags="-s -w" -o /dist/telekilogram ./cmd
 

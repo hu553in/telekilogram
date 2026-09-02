@@ -1,4 +1,2 @@
-profile: ./dist/coverage.out
-
 threshold:
   total: 17
