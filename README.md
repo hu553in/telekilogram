@@ -43,15 +43,15 @@ docker pull ghcr.io/hu553in/telekilogram:latest
 
 ## Configuration
 
-| Name                      | Required | Default        | Description                                                        |
-| ------------------------- | -------- | -------------- | ------------------------------------------------------------------ |
-| `TOKEN`                   | Yes      | -              | Telegram bot token                                                 |
-| `DB_PATH`                 | No       | `db.sqlite`    | SQLite database path                                               |
-| `ALLOWED_USERS`           | No       | -              | Comma-separated Telegram user IDs                                  |
-| `OPENAI_API_KEY`          | No       | -              | Enables OpenAI summaries (falls back to local truncation if unset) |
-| `OPENAI_AI_MODEL`         | No       | `gpt-5.6-luna` | OpenAI model                                                       |
-| `OPENAI_SERVICE_TIER`     | No       | `flex`         | OpenAI Responses API service tier                                  |
-| `OPENAI_REASONING_EFFORT` | No       | `low`          | OpenAI reasoning effort                                            |
+| Name                      | Required | Default      | Description                                                        |
+| ------------------------- | -------- | ------------ | ------------------------------------------------------------------ |
+| `TOKEN`                   | Yes      | -            | Telegram bot token                                                 |
+| `DB_PATH`                 | No       | `db.sqlite`  | SQLite database path                                               |
+| `ALLOWED_USERS`           | No       | -            | Comma-separated Telegram user IDs                                  |
+| `OPENAI_API_KEY`          | No       | -            | Enables OpenAI summaries (falls back to local truncation if unset) |
+| `OPENAI_AI_MODEL`         | No       | `gpt-6-luna` | OpenAI model                                                       |
+| `OPENAI_SERVICE_TIER`     | No       | `flex`       | OpenAI Responses API service tier                                  |
+| `OPENAI_REASONING_EFFORT` | No       | `low`        | OpenAI reasoning effort                                            |
 
 See `.env.example` for all available options including rate limits, scheduler timeouts, feed parsing
 parameters, and OpenAI tuning flags.
