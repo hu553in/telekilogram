@@ -9,7 +9,7 @@ require (
 	github.com/golang-migrate/migrate/v4 v4.20.1
 	github.com/mattn/go-sqlite3 v1.14.52
 	github.com/mmcdole/gofeed v1.5.0
-	github.com/openai/openai-go/v3 v3.66.0
+	github.com/openai/openai-go/v3 v3.71.1
 	github.com/robfig/cron/v3 v3.0.1
 	mvdan.cc/xurls/v2 v2.6.0
 )
@@ -31,7 +31,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.11.5 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.14.4 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.20.4 // indirect
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.113.4 // indirect
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.114.0 // indirect
 	github.com/aws/smithy-go v1.28.2 // indirect
 	github.com/coder/websocket v1.8.15 // indirect
 	github.com/coreos/go-semver v0.3.1 // indirect
@@ -56,11 +56,11 @@ require (
 	github.com/ncruces/go-sqlite3 v0.35.6 // indirect
 	github.com/ncruces/go-sqlite3-wasm/v6 v6.3.35304 // indirect
 	github.com/ncruces/julianday v1.0.0 // indirect
-	github.com/pganalyze/pg_query_go/v6 v6.2.2 // indirect
+	github.com/pganalyze/pg_query_go/v6 v6.2.5 // indirect
 	github.com/pingcap/errors v0.11.5-0.20260523003111-3697ad564b43 // indirect
 	github.com/pingcap/failpoint v0.0.0-20260811232634-55ac33a48e3b // indirect
 	github.com/pingcap/log v1.1.0 // indirect
-	github.com/pingcap/tidb/pkg/parser v0.0.0-20260928040219-372a0fdc69c5 // indirect
+	github.com/pingcap/tidb/pkg/parser v0.0.0-20261001035437-93a01d31f6da // indirect
 	github.com/riza-io/grpc-go v0.2.0 // indirect
 	github.com/rs/zerolog v1.35.1 // indirect
 	github.com/spf13/cobra v1.10.2 // indirect
@@ -68,11 +68,11 @@ require (
 	github.com/sqlc-dev/doubleclick v1.0.0 // indirect
 	github.com/sqlc-dev/sqlc v1.31.1 // indirect
 	github.com/tetratelabs/wazero v1.12.0 // indirect
-	github.com/tidwall/gjson v1.19.0 // indirect
+	github.com/tidwall/gjson v1.20.0 // indirect
 	github.com/tidwall/match v1.2.0 // indirect
 	github.com/tidwall/pretty v1.2.2 // indirect
 	github.com/tidwall/sjson v1.2.5 // indirect
-	github.com/vladopajic/go-test-coverage/v2 v2.19.0 // indirect
+	github.com/vladopajic/go-test-coverage/v2 v2.20.0 // indirect
 	github.com/wasilibs/go-pgquery v0.0.0-20260915022521-81f99195012b // indirect
 	github.com/wasilibs/wazero-helpers v0.0.0-20250123031827-cd30c44769bb // indirect
 	go.uber.org/atomic v1.12.0 // indirect
@@ -87,10 +87,10 @@ require (
 	golang.org/x/sys v0.48.0 // indirect
 	golang.org/x/telemetry v0.0.0-20260924152758-ed294f943157 // indirect
 	golang.org/x/text v0.42.0 // indirect
-	golang.org/x/tools v0.50.0 // indirect
+	golang.org/x/tools v0.51.0 // indirect
 	golang.org/x/vuln v1.8.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20260921155816-b14227669459 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260921155816-b14227669459 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20260928230214-8a89bd6388cc // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260928230214-8a89bd6388cc // indirect
 	google.golang.org/grpc v1.84.0 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
