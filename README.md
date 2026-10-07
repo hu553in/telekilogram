@@ -56,8 +56,7 @@ docker pull ghcr.io/hu553in/telekilogram:latest
 See `.env.example` for all available options including rate limits, scheduler timeouts, feed parsing
 parameters, and OpenAI tuning flags.
 
-`OPENAI_SYSTEM_PROMPT`, `TELEGRAM_USER_AGENT`, and `BOT_ISSUE_URL` have long defaults; keep them in
-`.env.example` instead of duplicating them here.
+Long defaults, including `OPENAI_SYSTEM_PROMPT`, are defined in `internal/config/config.go`.
 
 ## Usage
 
@@ -65,6 +64,9 @@ Local:
 
 ```bash
 make build
+set -a
+. ./.env
+set +a
 dist/telekilogram
 ```
 
@@ -89,7 +91,7 @@ Telegram UI:
 - `DB_PATH` controls the SQLite database path; in Docker, the image runs from `/data`
 - `ALLOWED_USERS` is optional; when empty, the bot is public
 - OpenAI summaries are disabled when `OPENAI_API_KEY` is unset
-- Telegram summaries use a 24-hour cache and invalidate when a Telegram post is edited
+- Telegram summaries are cached within the digest window; edited text gets a new summary
 - RSS, Atom, and JSON feed digests include post titles and links
 - Telegram digests include summaries or trimmed text with links to the original posts
 
