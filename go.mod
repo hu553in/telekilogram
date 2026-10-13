@@ -60,7 +60,7 @@ require (
 	github.com/pingcap/errors v0.11.5-0.20260523003111-3697ad564b43 // indirect
 	github.com/pingcap/failpoint v0.0.0-20260811232634-55ac33a48e3b // indirect
 	github.com/pingcap/log v1.1.0 // indirect
-	github.com/pingcap/tidb/pkg/parser v0.0.0-20261013043405-b8214940378d // indirect
+	github.com/pingcap/tidb/pkg/parser v0.0.0-20261013111941-9abd970a126e // indirect
 	github.com/riza-io/grpc-go v0.2.0 // indirect
 	github.com/rs/zerolog v1.35.1 // indirect
 	github.com/spf13/cobra v1.10.2 // indirect
@@ -73,7 +73,7 @@ require (
 	github.com/tidwall/pretty v1.2.2 // indirect
 	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/vladopajic/go-test-coverage/v2 v2.20.0 // indirect
-	github.com/wasilibs/go-pgquery v0.0.0-20261013012356-eff44a641106 // indirect
+	github.com/wasilibs/go-pgquery v0.0.0-20261013080023-1d929f320679 // indirect
 	github.com/wasilibs/wazero-helpers v0.0.0-20250123031827-cd30c44769bb // indirect
 	go.uber.org/atomic v1.12.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
