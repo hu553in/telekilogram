@@ -11,25 +11,6 @@ PREK ?= prek
 ensure-build-dir:
 	mkdir -p -- "$(BUILD_DIR)"
 
-.PHONY: check-workflows
-check-workflows:
-	$(ACTIONLINT)
-
-.PHONY: check-renovate
-check-renovate:
-	bunx --package renovate renovate-config-validator --strict --no-global renovate.json
-
-.PHONY: check-hooks
-check-hooks:
-	$(PREK) validate-config prek.toml
-
-.PHONY: check
-check: lint check-hooks build check-generated check-deps check-vulns verify-test-coverage check-renovate check-workflows
-
-.PHONY: check-fix
-check-fix: lint-fix
-	$(MAKE) check
-
 .PHONY: install-deps
 install-deps:
 	go mod download
@@ -48,14 +29,23 @@ lint-fix:
 	golangci-lint fmt
 	golangci-lint run --fix
 
-.PHONY: check-deps
-check-deps: install-deps
-	go mod tidy -diff
-	go mod verify
+.PHONY: check-hooks
+check-hooks:
+	$(PREK) validate-config prek.toml
+
+.PHONY: build
+build: ensure-build-dir install-deps
+	CGO_ENABLED=1 GOFLAGS="-buildvcs=false" \
+	go build -trimpath -ldflags="-s -w" -o "$(BUILD_DIR)/telekilogram" ./cmd
 
 .PHONY: check-generated
 check-generated: install-deps
 	go tool sqlc diff
+
+.PHONY: check-deps
+check-deps: install-deps
+	go mod tidy -diff
+	go mod verify
 
 .PHONY: check-vulns
 check-vulns: install-deps
@@ -70,14 +60,24 @@ test: ensure-build-dir install-deps
 		-coverpkg=./... \
 		./...
 
-.PHONY: verify-test-coverage
-verify-test-coverage: test
+.PHONY: check-coverage
+check-coverage: test
 	go tool go-test-coverage --config=./.testcoverage.yml --profile="$(BUILD_DIR)/coverage.out"
 
-.PHONY: build
-build: ensure-build-dir install-deps
-	CGO_ENABLED=1 GOFLAGS="-buildvcs=false" \
-	go build -trimpath -ldflags="-s -w" -o "$(BUILD_DIR)/telekilogram" ./cmd
+.PHONY: check-renovate
+check-renovate:
+	bunx --package renovate renovate-config-validator --strict --no-global renovate.json
+
+.PHONY: check-workflows
+check-workflows:
+	$(ACTIONLINT)
+
+.PHONY: check
+check: lint check-hooks build check-generated check-deps check-vulns check-coverage check-renovate check-workflows
+
+.PHONY: check-fix
+check-fix: lint-fix
+	$(MAKE) check
 
 .PHONY: clean
 clean:

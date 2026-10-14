@@ -18,9 +18,9 @@ delivers scheduled and on-demand digests, with optional OpenAI summaries for Tel
 
 ## Requirements
 
-- Go
+- Go and a C compiler for source builds (SQLite uses cgo)
 - Golangci-lint v2 for local checks
-- Bun and [prek](https://prek.j178.dev/) for repository-wide formatting and git hooks
+- Make, Bun, and [prek](https://prek.j178.dev/) for repository tooling
 - Telegram bot token
 - Writable SQLite database path
 - Optional: Docker for the published image
@@ -35,10 +35,19 @@ make install-deps
 cp .env.example .env
 ```
 
-Docker image (`latest` follows `main`; use a published `sha-*` tag for an immutable deployment):
+Published image:
 
 ```bash
 docker pull ghcr.io/hu553in/telekilogram:latest
+```
+
+`latest` follows `main`; `sha-*` tags identify commits. Pin
+`ghcr.io/hu553in/telekilogram@sha256:<digest>` for an immutable deployment.
+
+Local image:
+
+```bash
+docker build -t telekilogram .
 ```
 
 ## Configuration
@@ -72,9 +81,14 @@ dist/telekilogram
 
 Docker:
 
+The example `.env` works with both local shell sourcing and Docker. When reusing an older quoted
+file, remove outer quotes from Docker values; `docker run --env-file` passes them literally.
+
 ```bash
 docker run --rm --env-file .env -v telekilogram_data:/data ghcr.io/hu553in/telekilogram:latest
 ```
+
+Replace the published image name with `telekilogram` to run the local image.
 
 Telegram UI:
 
@@ -110,11 +124,14 @@ Focused checks:
 ```bash
 make lint
 make lint-fix
+make check-hooks
 make check-generated
 make check-deps
 make check-vulns
 make test
-make verify-test-coverage
+make check-coverage
+make check-renovate
+make check-workflows
 ```
 
 Build and generated SQL:
