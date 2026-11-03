@@ -4,7 +4,7 @@ go 1.27.3
 
 require (
 	github.com/PuerkitoBio/goquery v1.13.0
-	github.com/caarlos0/env/v11 v11.4.1
+	github.com/caarlos0/env/v11 v11.4.2
 	github.com/go-telegram/bot v1.27.0
 	github.com/golang-migrate/migrate/v4 v4.20.1
 	github.com/mattn/go-sqlite3 v1.14.52
@@ -60,7 +60,7 @@ require (
 	github.com/pingcap/errors v0.11.5-0.20261026075545-a34ae5ed13c8 // indirect
 	github.com/pingcap/failpoint v0.0.0-20260811232634-55ac33a48e3b // indirect
 	github.com/pingcap/log v1.1.0 // indirect
-	github.com/pingcap/tidb/pkg/parser v0.0.0-20261102172809-e343a53e558f // indirect
+	github.com/pingcap/tidb/pkg/parser v0.0.0-20261103052539-f354cc56cadc // indirect
 	github.com/riza-io/grpc-go v0.2.0 // indirect
 	github.com/rs/zerolog v1.35.1 // indirect
 	github.com/spf13/cobra v1.10.2 // indirect
