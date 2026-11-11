@@ -72,7 +72,7 @@ require (
 	github.com/tidwall/match v1.2.0 // indirect
 	github.com/tidwall/pretty v1.2.2 // indirect
 	github.com/tidwall/sjson v1.2.7 // indirect
-	github.com/vladopajic/go-test-coverage/v2 v2.22.0 // indirect
+	github.com/vladopajic/go-test-coverage/v2 v2.23.0 // indirect
 	github.com/wasilibs/go-pgquery v0.0.0-20261106060434-4301e51f8dbf // indirect
 	github.com/wasilibs/wazero-helpers v0.0.0-20250123031827-cd30c44769bb // indirect
 	go.uber.org/atomic v1.12.0 // indirect
