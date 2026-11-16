@@ -121,8 +121,8 @@ github.com/ncruces/go-sqlite3-wasm/v6 v6.6.35401 h1:i0P48wSb2AW6f9cNcuLlNUe5NJV0
 github.com/ncruces/go-sqlite3-wasm/v6 v6.6.35401/go.mod h1:9W+O90ho8Up/IQkWabsQZp8EKTSPCyNjSiM3jr/o/AQ=
 github.com/ncruces/julianday v1.0.0 h1:fH0OKwa7NWvniGQtxdJRxAgkBMolni2BjDHaWTxqt7M=
 github.com/ncruces/julianday v1.0.0/go.mod h1:Dusn2KvZrrovOMJuOt0TNXL6tB7U2E8kvza5fFc9G7g=
-github.com/openai/openai-go/v3 v3.98.0 h1:HHmNpTQykkgARTvPobfQqSItV57os4AJ+fB4megoH6E=
-github.com/openai/openai-go/v3 v3.98.0/go.mod h1:uMht5xIbHFTRAD05AiQXzNT9hJGklZHsCnyzeWiteGo=
+github.com/openai/openai-go/v3 v3.99.0 h1:Pc2z4NLWJ1dtwk7Trx4LlWNBMwcT5z99Q7cT0H6xcWM=
+github.com/openai/openai-go/v3 v3.99.0/go.mod h1:rpJT0W8BAp3rmc3a4HpqeuwpBF6tB6OdUPTXB0rFLGE=
 github.com/pganalyze/pg_query_go/v6 v6.2.5 h1:i7dvkA5167th3rXtk0jv9+r5DeJd4GqeGOVKuMTda8s=
 github.com/pganalyze/pg_query_go/v6 v6.2.5/go.mod h1:JZoURQupTV7G8lS6OzKakgvp+xpwu7+dH5kA5WrikzM=
 github.com/pingcap/errors v0.11.0/go.mod h1:Oi8TUi2kEtXXLMJk9l1cGmz20kV3TaQ0usTwv5KuLY8=
