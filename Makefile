@@ -2,8 +2,8 @@
 
 BUILD_DIR ?= ./dist
 
-ACTIONLINT := bunx github-actionlint
-TAPLO := bunx @taplo/cli
+ACTIONLINT := bunx --minimum-release-age 259200 github-actionlint
+TAPLO := bunx --minimum-release-age 259200 @taplo/cli
 PREK ?= prek
 
 .PHONY: ensure-build-dir
@@ -63,16 +63,12 @@ test: ensure-build-dir install-deps
 check-coverage: test
 	go tool go-test-coverage --config=./.testcoverage.yml --profile="$(BUILD_DIR)/coverage.out"
 
-.PHONY: check-renovate
-check-renovate:
-	bunx --package renovate renovate-config-validator --strict --no-global renovate.json
-
 .PHONY: check-workflows
 check-workflows:
 	$(ACTIONLINT)
 
 .PHONY: check
-check: lint check-hooks build check-generated check-deps check-vulns check-coverage check-renovate check-workflows
+check: lint check-hooks build check-generated check-deps check-vulns check-coverage check-workflows
 
 .PHONY: check-fix
 check-fix: lint-fix

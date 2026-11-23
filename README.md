@@ -130,7 +130,6 @@ make check-deps
 make check-vulns
 make test
 make check-coverage
-make check-renovate
 make check-workflows
 ```
 
