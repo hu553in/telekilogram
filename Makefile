@@ -3,12 +3,6 @@
 BUILD_DIR ?= ./dist
 
 ACTIONLINT := bunx --minimum-release-age 259200 github-actionlint
-TAPLO := bunx --minimum-release-age 259200 @taplo/cli
-PREK ?= prek
-
-.PHONY: ensure-build-dir
-ensure-build-dir:
-	mkdir -p -- "$(BUILD_DIR)"
 
 .PHONY: install-deps
 install-deps:
@@ -17,23 +11,21 @@ install-deps:
 .PHONY: lint
 lint:
 	bun fmt --check
-	$(TAPLO) fmt --check
 	golangci-lint fmt --diff
 	golangci-lint run
 
 .PHONY: lint-fix
 lint-fix:
 	bun fmt
-	$(TAPLO) fmt
 	golangci-lint fmt
 	golangci-lint run --fix
 
 .PHONY: check-hooks
 check-hooks:
-	$(PREK) validate-config prek.toml
+	bunx --minimum-release-age 259200 lefthook validate
 
 .PHONY: build
-build: ensure-build-dir install-deps
+build:
 	CGO_ENABLED=1 GOFLAGS="-buildvcs=false" \
 	go build -trimpath -ldflags="-s -w" -o "$(BUILD_DIR)/telekilogram" ./cmd
 
@@ -51,7 +43,8 @@ check-vulns: install-deps
 	go tool govulncheck ./...
 
 .PHONY: test
-test: ensure-build-dir install-deps
+test:
+	mkdir -p -- "$(BUILD_DIR)"
 	go test \
 		-race \
 		-coverprofile="$(BUILD_DIR)/coverage.out" \
@@ -76,7 +69,7 @@ check-fix: lint-fix
 
 .PHONY: clean
 clean:
-	rm -rf -- "$(BUILD_DIR)"
+	test -z "$(BUILD_DIR)" || rm -f -- "$(BUILD_DIR)/telekilogram" "$(BUILD_DIR)/coverage.out"
 
 .PHONY: sqlc
 sqlc:

@@ -18,9 +18,10 @@ delivers scheduled and on-demand digests, with optional OpenAI summaries for Tel
 
 ## Requirements
 
-- Go and a C compiler for source builds (SQLite uses cgo)
+- Go at the version declared in [`go.mod`](go.mod) or newer, and a C compiler for source builds
+  (SQLite uses cgo)
 - Golangci-lint v2 for local checks
-- Make, Bun, and [prek](https://prek.j178.dev/) for repository tooling
+- Make and Bun for repository tooling
 - Telegram bot token
 - Writable SQLite database path
 - Optional: Docker for the published image
@@ -31,8 +32,9 @@ delivers scheduled and on-demand digests, with optional OpenAI summaries for Tel
 Local checkout:
 
 ```bash
-make install-deps
-cp .env.example .env
+if [ ! -e .env ] && [ ! -L .env ]; then
+  (umask 077 && cp .env.example .env)
+fi
 ```
 
 Published image:
@@ -43,6 +45,9 @@ docker pull ghcr.io/hu553in/telekilogram:latest
 
 `latest` follows `main`; `sha-*` tags identify commits. Pin
 `ghcr.io/hu553in/telekilogram@sha256:<digest>` for an immutable deployment.
+
+Manual CI runs check the image by default. To publish manually, run CI on `main` with `publish`
+enabled.
 
 Local image:
 
@@ -112,8 +117,7 @@ Telegram UI:
 ## Development
 
 ```bash
-make install-deps
-prek install
+bunx lefthook install
 make check
 ```
 
